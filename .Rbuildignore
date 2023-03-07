@@ -2,3 +2,5 @@
 ^renv\.lock$
 ^NamibiaPovMap\.Rproj$
 ^\.Rproj\.user$
+^data-clean
+^data-raw
