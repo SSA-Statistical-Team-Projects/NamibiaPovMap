@@ -9,5 +9,20 @@ License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.2
-
+Imports:
+    sf (>= 1.0-9),
+    data.table (>= 1.14.6),
+    fst (>= 0.9.8),
+    readstata13 (>= 0.10.0),
+    dplyr (>= 1.0.10),
+    spatstat (>= 3.0-2),
+    emdi (>= 2.1.3),
+    leaflet (>= 2.1.1),
+    ggplot2 (>= 3.4.0),
+    glmnet (>= 4.1-6),
+    doParallel (>= 1.0.17),
+    rmarkdown,
+    tinytex,
+    RStata,
+    ggplot2
+RoxygenNote: 7.2.3
