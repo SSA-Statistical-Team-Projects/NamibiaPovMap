@@ -27,7 +27,7 @@ nam_selvars_list <-
                             y = "lwel_PPP",
                             weights = "wta_hh",
                             selection = "BIC",
-                            stata_path = "C:/Program Files/Stata17/StataMP-64.exe",
+                            stata_path = "C:/Program Files/Stata17/StataMP-64",
                             stata_vnum = 17)
 
 
