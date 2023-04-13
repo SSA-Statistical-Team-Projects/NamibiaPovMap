@@ -1,0 +1,327 @@
+---
+title: "DESCRIPTIVE ANALYSIS : Census Vs Survey"
+
+output:
+  html_document:
+    df_print: paged
+    geometry: "a4paper, margin=2cm,2cm,2cm,2cm"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Preparation of databases and packages
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(tidyr)
+library(weights)
+library(descr)
+library(knitr)
+load("~/World Bank/GitHub_Projects/NamibiaPovMap/inst/data/cencus_dt.RData")
+load("~/World Bank/GitHub_Projects/NamibiaPovMap/inst/data/survey_dt.RData")
+survey_dt$wta_hh <-as.numeric(survey_dt$wta_hh)
+census_dt$wta_hh <-as.numeric(census_dt$wta_hh)
+```
+### selection of variables to be compared between the census and the survey. 
+
+We used the `missing_var( )` and `cand_var( ) ` functions below.
+
+
+```{r echo=TRUE}
+missing_var <- function(dt){
+  df <- data.frame(dt)
+  missing_count <- colSums(is.na(df))
+  missing_cols <- which(missing_count == nrow(df))
+  names(df[, missing_cols])
+}
+
+
+cand_var <- function(pop_dt, smp_dt, oth_var) {
+  pop_df <- data.frame(pop_dt)
+  smp_df <- data.frame(smp_dt)
+  common_vars <- intersect(names(pop_df),names(smp_df))
+  res <- common_vars[!(common_vars %in% oth_var)]
+  fin_res <- intersect(res[!(res %in% missing_var(smp_df))],
+                    res[!(res %in% missing_var(pop_df))])
+
+  return(fin_res) }
+
+
+```
+selection of variables to be compared between the census and the survey.
+
+```{r }
+ID <- c("hid","region_code", "region_name", "const_code","wta_hh", "wta_pop" )
+candvar_list <- cand_var(pop_dt = census_dt, smp_dt = survey_dt, oth_var=ID)
+print(candvar_list)
+```
+
+We have used a function called `dummify( )`  that transforms the categorical variables into dummy variables, each representing a modality of the categorical variable. See his code below : 
+```{r}
+
+dummify <- function(x)
+              {
+  if(is.matrix(x) || is.data.frame(x)) {
+    x <- as.data.frame(x)
+    y <- do.call(data.frame, lapply(x, dummify))
+    return(as.matrix(y))
+  }
+  # x is 1-dimensional
+  if(is.complex(x))
+    return(as.matrix(data.frame(Re=Re(x), Im=Im(x))))
+  # convert factors etc
+  if(is.character(x))
+    x <- factor(x)
+  if(is.logical(x))
+    x <- factor(x, levels=c(FALSE,TRUE))
+  if(is.factor(x)) {
+    # convert to dummy variables
+    nx <- length(x)
+    lev <- levels(x)
+    y <- matrix(0L, nrow=nx, ncol=length(lev))
+    colnames(y) <- lev
+    y[cbind(seq_len(nx), as.integer(x))] <- 1L
+    return(y)
+  }
+  # convert to numeric
+  y <- as.numeric(x)
+  if(!is.matrix(y))
+    y <- matrix(y, ncol=1)
+
+  return(y)
+}
+```
+Then we used a `compare_test_mean( )` function to perform comparisons of variables between Census and Survey. See the code below : 
+```{r}
+compar_test_means<- function(smp_data,
+                           pop_data,
+                           var,
+                           smp_weights,
+                           pop_weights){
+  
+  ### get the set of complete cases of the variables as
+  ### would have been used in model estimation
+  smp_df <- smp_data[complete.cases(c(var, smp_weights)),
+                     c(var, smp_weights)]
+  pop_df <- pop_data[complete.cases(c(var, pop_weights)),
+                     c(var, pop_weights)]
+  
+  
+  smp_means_df <- data.frame(smp_means = colMeans(smp_df[var]),
+                             smp_sd = apply(X = smp_df[var],
+                                            MARGIN = 2,
+                                            FUN = sd,
+                                            na.rm = TRUE),
+                             variable = var)
+  
+  pop_means_df <- data.frame(pop_means = colMeans(pop_df[var]),
+                             pop_sd = apply(X = pop_df[var],
+                                            MARGIN = 2,
+                                            FUN = sd,
+                                            na.rm = TRUE),
+                             variable = var)
+  
+  means_df <- merge(smp_means_df, pop_means_df, by = "variable")
+  
+  means_df$diff_sd <- sqrt((means_df$smp_sd)^2 + (means_df$pop_sd)^2)
+  
+  means_df$diff <- means_df$pop_means - means_df$smp_means
+  
+  means_df$zscore <- means_df$diff / means_df$diff_sd
+  
+  means_df$pvalue <- 2 * (1 - pnorm(abs(means_df$zscore)))
+  
+  return(means_df[, c("variable", "smp_means", "pop_means", "diff", "pvalue")])
+  
+}
+```
+
+### For the variable `rooms` nous avons  : 
+```{r}
+var <-"rooms"
+ compar_test_means(smp_data =as.data.frame(na.omit(survey_dt[,c(var,"cluster","wta_hh")])),
+                pop_data = as.data.frame(na.omit(census_dt[,c(var, "const_code","wta_hh")])),
+                var = var , smp_weights ="wta_hh",pop_weights = "wta_hh" )
+
+```
+plotting histograms
+
+```{r}
+
+dt <- data.table(census_dt)
+dt$wta_hh <- as.numeric(dt$wta_hh)
+dt$rooms <- as.numeric(dt$rooms)
+df = as.data.frame(wtd.table(dt$rooms, weights = dt$wta_hh))
+df$rooms <- as.numeric(rownames(df))
+df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+
+ hist1 <- ggplot(df, aes(x = rooms, y = proportion, fill="Census")) +
+  geom_bar(stat = "identity") +
+  xlab("Number of Rooms") +
+  ylab("Proportion") +
+  scale_fill_manual(values = "red")+
+   labs(fill="")
+ 
+dt <- data.table(survey_dt)
+dt$wta_hh <- as.numeric(dt$wta_hh)
+dt$rooms <- as.numeric(dt$rooms)
+df = as.data.frame(wtd.table(dt$rooms, weights = dt$wta_hh))
+df$rooms <- as.numeric(rownames(df))
+df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+
+ hist2 <- ggplot(df, aes(x = rooms, y = proportion, fill="Survey")) +
+  geom_bar(stat = "identity") +
+  xlab("Number of Rooms") +
+  ylab("Proportion") +
+  scale_fill_manual(values = "blue")+
+   labs(fill="")
+ 
+grid.arrange(hist1, hist2, ncol = 2, top = "Census vs Survey")
+```
+
+Based on the evidence of the data, we can state that, at a 5% risk, the "rooms" variable has the same distribution in the census and in the survey.
+
+
+
+### For the variable `hhsize` nous avons  : 
+```{r}
+var <-"hhsize"
+census_dt$hhsize <- as.numeric(census_dt$hhsize)
+ compar_test_means(smp_data =as.data.frame(na.omit(survey_dt[,c(var,"cluster","wta_hh")])),
+                pop_data = as.data.frame(na.omit(census_dt[,c(var, "const_code","wta_hh")])),
+                var = "hhsize", smp_weights ="wta_hh",pop_weights = "wta_hh" )
+
+```
+plotting histograms
+
+```{r}
+
+dt <- data.table(census_dt)
+dt$wta_hh <- as.numeric(dt$wta_hh)
+dt$hhsize <- as.numeric(dt$hhsize)
+df = as.data.frame(wtd.table(dt$hhsize, weights = dt$wta_hh))
+df$hhsize <- as.numeric(rownames(df))
+df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+
+ hist1 <- ggplot(df, aes(x = hhsize, y = proportion, fill="Census")) +
+  geom_bar(stat = "identity") +
+  xlab("Number of Rooms") +
+  ylab("Proportion") +
+  scale_fill_manual(values = "red")+
+   labs(fill="")
+ 
+dt <- data.table(survey_dt)
+dt$wta_hh <- as.numeric(dt$wta_hh)
+dt$hhsize <- as.numeric(dt$hhsize)
+df = as.data.frame(wtd.table(dt$hhsize, weights = dt$wta_hh))
+df$hhsize <- as.numeric(rownames(df))
+df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+
+ hist2 <- ggplot(df, aes(x = hhsize, y = proportion, fill="Survey")) +
+  geom_bar(stat = "identity") +
+  xlab("Number of Rooms") +
+  ylab("Proportion") +
+  scale_fill_manual(values = "blue")+
+   labs(fill="")
+ 
+grid.arrange(hist1, hist2, ncol = 2, top = "Census vs Survey")
+```
+
+Based on the evidence of the data, we can state that, at a 5% risk, the "hhsize" variable has the same distribution in the census and in the survey.
+
+
+
+
+### For the variable `roof` nous avons  : 
+```{r}
+dummify(roof)
+var <-"roof"
+census_dt$roof <- as.numeric(census_dt$roof)
+ compar_test_means(smp_data =as.data.frame(na.omit(survey_dt[,c(var,"cluster","wta_hh")])),
+                pop_data = as.data.frame(na.omit(census_dt[,c(var, "const_code","wta_hh")])),
+                var = "roof", smp_weights ="wta_hh",pop_weights = "wta_hh" )
+
+```
+plotting histograms
+
+```{r}
+
+dt <- data.table(census_dt)
+dt$wta_hh <- as.numeric(dt$wta_hh)
+dt$roof <- as.numeric(dt$roof)
+df = as.data.frame(wtd.table(dt$roof, weights = dt$wta_hh))
+df$roof <- as.numeric(rownames(df))
+df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+
+ hist1 <- ggplot(df, aes(x = roof, y = proportion, fill="Census")) +
+  geom_bar(stat = "identity") +
+  ylab("Proportion") +
+  scale_fill_manual(values = "red")+
+   labs(fill="")
+ 
+dt <- data.table(survey_dt)
+dt$wta_hh <- as.numeric(dt$wta_hh)
+dt$roof <- as.numeric(dt$roof)
+df = as.data.frame(wtd.table(dt$roof, weights = dt$wta_hh))
+df$roof <- as.numeric(rownames(df))
+df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+
+ hist2 <- ggplot(df, aes(x = roof, y = proportion, fill="Survey")) +
+  geom_bar(stat = "identity") +
+  ylab("Proportion") +
+  scale_fill_manual(values = "blue")+
+   labs(fill="")
+ 
+grid.arrange(hist1, hist2, ncol = 2, top = "Census vs Survey")
+```
+
+Based on the evidence of the data, we can state that, at a 5% risk, the "roof" variable has the same distribution in the census and in the survey.
+
+### For the variable `wall` nous avons  : 
+```{r}
+dummify(wall)
+var <-"wall"
+census_dt$wall <- as.numeric(census_dt$wall)
+ compar_test_means(smp_data =as.data.frame(na.omit(survey_dt[,c(var,"cluster","wta_hh")])),
+                pop_data = as.data.frame(na.omit(census_dt[,c(var, "const_code","wta_hh")])),
+                var = "wall", smp_weights ="wta_hh",pop_weights = "wta_hh" )
+
+```
+plotting histograms
+
+```{r}
+
+dt <- data.table(census_dt)
+dt$wta_hh <- as.numeric(dt$wta_hh)
+dt$wall <- as.numeric(dt$wall)
+df = as.data.frame(wtd.table(dt$wall, weights = dt$wta_hh))
+df$wall <- as.numeric(rownames(df))
+df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+
+ hist1 <- ggplot(df, aes(x = wall, y = proportion, fill="Census")) +
+  geom_bar(stat = "identity") +
+  ylab("Proportion") +
+  scale_fill_manual(values = "red")+
+   labs(fill="")
+ 
+dt <- data.table(survey_dt)
+dt$wta_hh <- as.numeric(dt$wta_hh)
+dt$wall <- as.numeric(dt$wall)
+df = as.data.frame(wtd.table(dt$wall, weights = dt$wta_hh))
+df$wall <- as.numeric(rownames(df))
+df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+
+ hist2 <- ggplot(df, aes(x = wall, y = proportion, fill="Survey")) +
+  geom_bar(stat = "identity") +
+  ylab("Proportion") +
+  scale_fill_manual(values = "blue")+
+   labs(fill="")
+ 
+grid.arrange(hist1, hist2, ncol = 2, top = "Census vs Survey")
+```
+
+Based on the evidence of the data, we can state that, at a 5% risk, the "wall" variable has the same distribution in the census and in the survey.
+
