@@ -6,8 +6,8 @@ library(knitr)
 library(RStata)
 library(stats)
 library(haven)
-load("~/World Bank/GitHub_Projects/NamibiaPovMap/inst/data/cencus_dt.RData")
-load("~/World Bank/GitHub_Projects/NamibiaPovMap/inst/data/survey_dt.RData")
+load(here("inst/data/cencus_dt.RData"))
+load(here("inst/data/survey_dt.RData"))
 
 survey_dt$ea_id <- survey_dt$cluster
 survey_dt$lwel_PPP <- log(survey_dt$wel_PPP)
