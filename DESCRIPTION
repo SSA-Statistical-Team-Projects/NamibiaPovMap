@@ -24,5 +24,9 @@ Imports:
     rmarkdown,
     tinytex,
     RStata,
-    ggplot2
+    ggplot2,
+    weights,
+    pacman,
+    descr,
+    haven
 RoxygenNote: 7.2.3
