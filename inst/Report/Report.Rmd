@@ -319,13 +319,7 @@ yt2=cbind(survey_dt, yt)[c(new_varlist2, cand_varlist, "wta_hh", "cluster")]
 ```
 
 
-```{r}
-hist_plot(dt = dt2, var="cellphone" , weights = "wta_hh", col = "black")
-```
 
-```{r}
-hist_plot(dt = dt2, var="wta_hh" , weights = "wta_hh", col = "black")
-```
 
 ```{r}
 varlist=intersect(new_varlist1, new_varlist2)
@@ -337,39 +331,6 @@ ebp_test_means(smp_data =as.data.frame(na.omit(yt2[,c(varlist,"wta_hh")])),
                   varlist = varlist , smp_weights ="wta_hh",pop_weights = "wta_hh" )
 #(Table,file="Descriptive_statistics.csv", row.names = FALSE)
 ```
-
-
-
-```{r}
-
-candvar_list<-c("rururb" ,"wel_PPP",  "wall", "floor" ,"water14" ,
-                "agecat", "relathh9", "marital5", "radio", "television" , "computer", "cellphone" , "landphone" ,
-                "internet", "waterpipe", "piped", "cluster")
-
-candvar_list <- c("rururb" ,"wel_PPP")
-
-survey_dt[,candvar_list] <- lapply(survey_dt[,candvar_list] ,as.numeric)
-survey_dt$ea_id<-survey_dt$cluster
-survey_dt$lwel_PPP<-log(survey_dt$wel_PPP)
-
-file.create("Rstata.log")
-
-nam_selvars_list <-
-  countrymodel_select_stata(dt = na.omit(survey_dt[,c("lwel_PPP", "wta_hh",
-                                                                 "ea_id",
-                                                                 candvar_list)]),
-                            xvars = candvar_list,
-                            y = "lwel_PPP",
-                            weights = "wta_hh",
-                            selection = "BIC",
-                            stata_path = "C:/Program Files/Stata17/StataMP-64",
-                            stata_vnum = 17)
-
-```
-
-
-
-
 
 
 

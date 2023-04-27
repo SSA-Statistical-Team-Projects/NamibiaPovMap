@@ -41,7 +41,7 @@ countrymodel_select_stata <- function(dt,
   options("RStata.StataVersion" = stata_vnum)
 
   stata_src <- c("use data.dta, replace",
-                 paste0("lassowrapper ", colnames(y), " ", x[1], "-",
+                 paste0("lassowrapper ", names(y) , " ", x[1], "-",
                         x[length(x)],", weights(hhweight) force(areadummy*) select(bic, postsel) cluster(ea_id) input(data.dta) output(model.txt)"))
 
   RStata::stata(src = stata_src)

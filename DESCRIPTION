@@ -28,5 +28,6 @@ Imports:
     weights,
     pacman,
     descr,
-    haven
+    haven,
+    rgdal
 RoxygenNote: 7.2.3

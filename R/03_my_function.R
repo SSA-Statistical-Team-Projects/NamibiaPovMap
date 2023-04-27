@@ -115,6 +115,9 @@ show_row <- function(df, row_idx)
 }
 
 
+
+
+
 #-------Function to compare mean for a single variable
 compar_test_means<- function(smp_data,
                            pop_data,
@@ -161,29 +164,25 @@ compar_test_means<- function(smp_data,
 
 
 
+plot_hist <- function(pop_df, var, pop_weight) {
 
-#---Function to plot histogramms
 
-
-# FOR CENSUS
-plot_hist <- function(pop_df, smp_df, var,pop_weight, smp_weight)
-            {
 
   dt <- data.table(pop_df)
-  dt$pop_weight <- as.numeric(dt$pop_weight)
-  dt$var <- as.numeric(dt$var)
-  df = as.data.frame(wtd.table(dt$var, weights = dt$pop_weight))
-  df$var <- as.numeric(rownames(df))
-  df$proportion <- df$sum.of.weights /sum(df$sum.of.weights)
+  dt[[pop_weight]] <- as.numeric(dt[[pop_weight]])
+  dt[[var]] <- as.numeric(dt[[var]])
 
-  ggplot(df, aes(x = var, y = proportion, fill="Census")) +
+  df <- prop.table(wtd.table(x = dt[[var]], weights = dt[[pop_weight]]))
+
+  ggplot(df, aes(x = df[[var]], fill="Census")) +
     geom_bar(stat = "identity") +
     xlab("Number of Rooms") +
     ylab("Proportion") +
     scale_fill_manual(values = "red")+
-    labs(fill="")
-
+    labs(fill="") +
+    ggtitle("Histogram of Number of Rooms")
 }
+
 
 
 
