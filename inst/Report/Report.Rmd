@@ -9,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 
-### Les packages utilisés 
+### Pacages used
 knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load("here")
 library(ggplot2)
@@ -23,8 +23,39 @@ library(data.table)
 library(RStata)
 library(stats)
 library(haven)
+
 load(here("inst/data/cencus_dt.RData"))
 load(here("inst/data/survey_dt.RData"))
+
+#Some changes to the data
+
+
+census_dt$constituency_name <-  ifelse(
+                               census_dt$constituency_name %in% c(" eengodi",
+                                                      " okankolo", " guinas",
+                                            " tsumeb"), " nehale lyampingana",
+                                              census_dt$constituency_name)
+
+census_dt$const_code <-  ifelse(
+                             census_dt$const_code %in% c("1201", "1202",
+                                                 "1203","1210"), "1203",
+                                                census_dt$const_code)
+
+survey_dt$contituency_name <-  ifelse(
+                                survey_dt$contituency_name %in% c(" eengodi",
+                                                " okankolo", " guinas",
+                                          " tsumeb"), " nehale lyampingana",
+                                        survey_dt$contituency_name)
+
+
+survey_dt$new_const_code <- NA
+for (i in 1:nrow(survey_dt)) {
+  match_row <- which(census_dt$constituency_name == survey_dt$contituency_name[i] |
+                       census_dt$constituency_name == survey_dt$contituency_prev_name[i])
+  if (length(match_row) > 0) {
+    survey_dt$new_const_code[i] <- census_dt$const_code[match_row[1]]
+  }
+}
 
 survey_dt$internet <- recode(survey_dt$internet, "Subscribed in the house"="Yes",
                                     " Accessible outside the house" ="Yes" ,
@@ -33,6 +64,8 @@ survey_dt$internet <- recode(survey_dt$internet, "Subscribed in the house"="Yes"
 
 survey_dt$wta_hh <-as.numeric(survey_dt$wta_hh)
 census_dt["wta_hh"] <- lapply(haven::zap_labels(census_dt["wta_hh"]) ,as.numeric)
+
+
 
 
 #### Functions used
@@ -255,7 +288,6 @@ countrymodel_select_stata <- function(dt,
 
 }
 
-
 ```
 
 
@@ -272,63 +304,31 @@ cand_varlist <-cand_var(pop_dt = census_dt, smp_dt = survey_dt, oth_var=ID)
 
 We have used a function called `dummify( )`  that transforms the categorical variables into dummy variables, each representing a modality of the categorical variable.
 
-```{r}
-hist_plot(dt = census_dt, var="rooms", weights = "wta_hh", col = "black")
-```
-
-```{r}
-hist_plot(dt = survey_dt, var="rooms", weights = "wta_hh", col = "blue")
-```
-
-```{r}
-hist_plot(dt = census_dt, var="hhsize", weights = "wta_hh", col = "brown")
-```
-
-```{r}
-hist_plot(dt = survey_dt, var="hhsize", weights = "wta_hh", col = "red")
-```
-
-```{r}
-vect=c("rooms", "hhsize")
-for (i in 1:length(vect)){
-print(hist_plot(dt=census_dt,var = vect[i], weights = "wta_hh",col = "black"))
-}
-```
-
 
 ```{r}
 ## use of function dummify() and managing factor variable and categorical variables and producing statistics tables
 
 cand_varlist = cand_var(pop_dt = census_dt, smp_dt = survey_dt, oth_var=ID)
-dummify(cand_varlist)
-
-
-```
-
-```{r}
 dt=data.frame(dummify(census_dt[cand_varlist]))
 new_varlist1=names(dt)
 dt2=cbind(census_dt, dt)[c(new_varlist1, cand_varlist, "wta_hh", "const_code")]
 
-```
-
-```{r}
 yt=data.frame(dummify(survey_dt[cand_varlist]))
 new_varlist2=names(yt)
-yt2=cbind(survey_dt, yt)[c(new_varlist2, cand_varlist, "wta_hh", "cluster")]
-```
+yt2=cbind(survey_dt, yt)[c(new_varlist2, cand_varlist, "wta_hh", "new_const_code")]
 
-
-
-
-```{r}
 varlist=intersect(new_varlist1, new_varlist2)
+
 ```
+
+
 
 ```{r}
 ebp_test_means(smp_data =as.data.frame(na.omit(yt2[,c(varlist,"wta_hh")])),
                   pop_data = as.data.frame(na.omit(dt2[,c(varlist,"wta_hh")])),
-                  varlist = varlist , smp_weights ="wta_hh",pop_weights = "wta_hh" )
+                  varlist = varlist ,
+                  smp_weights ="wta_hh",
+                  pop_weights = "wta_hh" )
 #(Table,file="Descriptive_statistics.csv", row.names = FALSE)
 ```
 

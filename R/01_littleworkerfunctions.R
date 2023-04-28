@@ -1,3 +1,4 @@
+#-----------------------------------------------------------------------------#
 #### shells to Stata to estimate lasso regression for selecting variables
 
 countrymodel_select_stata <- function(dt,
@@ -59,18 +60,19 @@ countrymodel_select_stata <- function(dt,
 
   return(var_list)
 
-
 }
 
 
-
+#-----------------------------------------------------------------------------#
 ### Function to realize descriptive statistics
+
 
 ebp_test_means <- function(smp_data,
                            pop_data,
                            varlist,
                            smp_weights,
-                           pop_weights){
+                           pop_weights)
+{
 
   ### get the set of complete cases of the variables as
   ### would have been used in model estimation
@@ -79,54 +81,75 @@ ebp_test_means <- function(smp_data,
   pop_df <- pop_data[complete.cases(c(varlist, pop_weights)),
                      c(varlist, pop_weights)]
 
-  weighted.sd <- function(x, w){
 
-    delta_sq <- (x - mean(x))^2 ##square deviation of the xs
-
-    nzero_w <- (length(w[w > 0]) - 1) / length(w[w > 0])
-
-    result <- sqrt(sum(w * (delta_sq)) / (nzero_w * sum(w)))
-
-    return(result)
-  }
-
-  smp_means_df <- data.frame(smp_means = apply(X = smp_df[,varlist],
-                                               MARGIN = 2,
-                                               FUN = weighted.mean,
-                                               w = smp_df[[smp_weights]]),
+  smp_means_df <- data.frame(smp_means = colMeans(smp_df[,varlist]),
                              smp_sd = apply(X = smp_df[,varlist],
                                             MARGIN = 2,
-                                            FUN = weighted.sd,
-                                            w = smp_df[[smp_weights]]),
+                                            FUN = sd,
+                                            na.rm = TRUE),
                              variable = varlist)
 
-  pop_means_df <- data.frame(pop_means = apply(X = pop_df[,varlist],
-                                               MARGIN = 2,
-                                               FUN = weighted.mean,
-                                               w = pop_df[[pop_weights]]),
+  pop_means_df <- data.frame(pop_means = colMeans(pop_df[,varlist]),
                              pop_sd = apply(X = pop_df[,varlist],
                                             MARGIN = 2,
-                                            FUN = weighted.sd,
-                                            w = pop_df[[pop_weights]]),
+                                            FUN = sd,
+                                            na.rm = TRUE),
                              variable = varlist)
 
   means_df <- merge(smp_means_df, pop_means_df, by = "variable")
-
   means_df$diff_sd <- sqrt((means_df$smp_sd)^2 + (means_df$pop_sd)^2)
-
   means_df$diff <- means_df$pop_means - means_df$smp_means
-
   means_df$zscore <- means_df$diff / means_df$diff_sd
+  means_df$pvalue <- 2 * (1 - pnorm(abs(means_df$zscore)))
+  return(means_df[, c("variable", "smp_means", "pop_means", "diff", "pvalue")])
 
+}
+
+
+#----------------------------------------------------------------------------#
+# Modified version of the ebp_test_means() function that compares the means for a variable
+
+
+compar_test_means<- function(smp_data,
+                             pop_data,
+                             var,
+                             smp_weights,
+                             pop_weights)
+{
+
+  ### get the set of complete cases of the variables as
+  ### would have been used in model estimation
+  smp_df <- smp_data[complete.cases(c(var, smp_weights)),
+                     c(var, smp_weights)]
+  pop_df <- pop_data[complete.cases(c(var, pop_weights)),
+                     c(var, pop_weights)]
+
+  smp_means_df <- data.frame(smp_means = colMeans(smp_df[var]),
+                             smp_sd = apply(X = smp_df[var],
+                                            MARGIN = 2,
+                                            FUN = sd,
+                                            na.rm = TRUE),
+                             variable = var)
+
+  pop_means_df <- data.frame(pop_means = colMeans(pop_df[var]),
+                             pop_sd = apply(X = pop_df[var],
+                                            MARGIN = 2,
+                                            FUN = sd,
+                                            na.rm = TRUE),
+                             variable = var)
+
+  means_df <- merge(smp_means_df, pop_means_df, by = "variable")
+  means_df$diff_sd <- sqrt((means_df$smp_sd)^2 + (means_df$pop_sd)^2)
+  means_df$diff <- means_df$pop_means - means_df$smp_means
+  means_df$zscore <- means_df$diff / means_df$diff_sd
   means_df$pvalue <- 2 * (1 - pnorm(abs(means_df$zscore)))
 
   return(means_df[, c("variable", "smp_means", "pop_means", "diff", "pvalue")])
 
 }
 
-
-
-### Function to create dummy variables from categorical variable with more than 2 modalities
+#----------------------------------------------------------------------------#
+### Function to create dummy variables from categorical variables
 
 dummify <- function(x) {
   if(is.matrix(x) || is.data.frame(x)) {
@@ -158,3 +181,50 @@ dummify <- function(x) {
   return(y)
 }
 
+
+#----------------------------------------------------------------------------#
+#Function to determine variables with 100% missing values
+missing_var <- function(dt)
+{
+  df <- data.frame(dt)
+  missing_count <- colSums(is.na(df))
+  missing_cols <- which(missing_count == nrow(df))
+  names(df[, missing_cols])
+}
+
+
+#----------------------------------------------------------------------------#
+# Function to determine common variables between databases
+
+cand_var <- function(pop_dt, smp_dt, oth_var) {
+  pop_df <- data.frame(pop_dt)
+  smp_df <- data.frame(smp_dt)
+  common_vars <- intersect(names(pop_df),names(smp_df))
+  res <- common_vars[!(common_vars %in% oth_var)]
+  fin_res <- intersect(res[!(res %in% missing_var(smp_df))],
+                       res[!(res %in% missing_var(pop_df))])
+  return(fin_res)
+}
+
+
+#----------------------------------------------------------------------------#
+# Function to plot histograms
+
+hist_plot <- function(dt, var, weights, col)
+{
+
+  dt[[weights]] <- as.numeric(dt[[weights]])
+  dt[[var]] <- as.numeric(dt[[var]])
+  y <- as.data.frame(wtd.table(x = dt[[var]], weights = dt[[weights]]), col.names = c(var,"Proportion"))
+  y[,2] <- prop.table(y[,2])
+  hist <- ggplot(y, aes(x = !!sym(var), y=Proportion,fill="Census")) +
+    geom_bar(stat = "identity") +
+    xlab(paste("variable ", var, sep="")) +
+    ylab("Proportion") +
+    scale_fill_manual(values = col)+
+    labs(fill="") +
+    ggtitle(paste("Histogram of variable ", var, sep=""))
+
+  return(hist)
+
+}

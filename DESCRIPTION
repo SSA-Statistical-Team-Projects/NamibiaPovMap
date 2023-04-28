@@ -29,5 +29,7 @@ Imports:
     pacman,
     descr,
     haven,
-    rgdal
+    rgdal,
+    here,
+    pacman
 RoxygenNote: 7.2.3
