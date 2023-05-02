@@ -13,6 +13,9 @@ library(haven)
 library(stats)
 library(openxlsx)
 
+pacman::p_load(c("ggplot2", "gridExtra", "dplyr", "tidyr", "weights",
+                 "descr", "knitr", "data.table", "stats", "here"))
+
 load(here("inst/data/cencus_dt.RData"))
 load(here("inst/data/survey_dt.RData"))
 
@@ -21,22 +24,22 @@ load(here("inst/data/survey_dt.RData"))
 #Some changes to the data
 #------------------------------------------------------------------------------#
 
-census_dt$constituency_name <-  ifelse(
-census_dt$constituency_name %in% c(" eengodi",
-                                     " okankolo", " guinas",
-                                     " tsumeb"),
-                            " nehale lyampingana",
-                            census_dt$constituency_name)
+census_dt$constituency_name <-
+  ifelse(census_dt$constituency_name %in%
+           c(" eengodi", " okankolo", " guinas"," tsumeb"),
+         " nehale lyampingana",
+         census_dt$constituency_name)
 
-census_dt$const_code <-  ifelse(
-census_dt$const_code %in% c("1201", "1202", "1203","1210"),
-                                                    "1203",
-                                   census_dt$const_code)
+census_dt$const_code <-  ifelse(census_dt$const_code %in% c("1201", "1202",
+                                                            "1203","1210"),
+                                "1203",
+                                census_dt$const_code)
 
-survey_dt$contituency_name <-  ifelse(
-survey_dt$contituency_name %in% c(" eengodi"," okankolo", " guinas"," tsumeb"),
-                                        " nehale lyampingana",
-                                survey_dt$contituency_name)
+survey_dt$contituency_name <-
+  ifelse(survey_dt$contituency_name %in%
+           c(" eengodi"," okankolo", " guinas"," tsumeb"),
+         " nehale lyampingana",
+         survey_dt$contituency_name)
 
 
 survey_dt$new_const_code <- NA
