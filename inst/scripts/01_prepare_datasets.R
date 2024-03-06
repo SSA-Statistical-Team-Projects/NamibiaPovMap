@@ -1,5 +1,3 @@
-devtools::load_all()
-
 #------------------------------------------------------------------------------#
 ## environment set up
 #------------------------------------------------------------------------------#
@@ -18,7 +16,7 @@ options(
 pacman::p_load(dplyr, here, descr, data.table, tidyr, stats,  haven)
 
 
-source(here("R/01_littleworkerfunctions.R"))
+# source(here("R/01_littleworkerfunctions.R"))
 load(here("inst/data/cencus_dt.RData"))
 load(here("inst/data/survey_dt.RData"))
 
@@ -65,7 +63,6 @@ survey_dt$internet <- recode(survey_dt$internet,
 
 
 survey_dt  <- rename(survey_dt, constituency_name = contituency_name,
-
                      constituency_prev_name = contituency_prev_name)
 
 

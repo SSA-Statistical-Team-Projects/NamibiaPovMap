@@ -40,23 +40,14 @@ nam_model <- emdiplus::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selv
                                                                 "new_const_code",
                                                                 "wta_hh")])),
                  smp_domains = "new_const_code",
-
                  transformation = "log",
-
                  threshold = 6249,
-
                  pop_weights = "wta_hh",
-
                  weights = "wta_hh",
-
-                 # L= 100,
-
-                 # B=100,
-
+                 L= 100,
+                 B=100,
                  cpus = 1,
-
                  MSE = FALSE,
-
                  na.rm = TRUE)
 #------------------------------------------------------------------------------#
 saveRDS(nam_model, here("data-raw/nam_model.RDS") )
