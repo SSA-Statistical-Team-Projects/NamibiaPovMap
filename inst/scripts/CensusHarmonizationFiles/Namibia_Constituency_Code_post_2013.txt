@@ -1,0 +1,121 @@
+0101, !karas, ??nami?‚n?»s, luderitz
+0102, !karas, berseba, berseba
+0103, !karas, karasburg east, karasburg
+0104, !karas, karasburg west, karasburg
+0105, !karas, keetmanshoop rural, keetmanshoop rural
+0106, !karas, keetmanshoop urban, keetmanshoop urban
+0107, !karas, oranjemund, oranjemund
+0201, erongo, arandis, arandis
+0202, erongo, d??ures, daures
+0203, erongo, karibib, karibib
+0204, erongo, omaruru, omaruru
+0205, erongo, swakopmund, swakopmund
+0206, erongo, walvis bay rural, walvis bay rural
+0207, erongo, walvis bay urban, walvis bay urban
+0301, hardap, gibeon, gibeon
+0302, hardap, mariental rural, mariental rural
+0303, hardap, mariental urban, mariental urban
+0304, hardap, rehoboth rural, rehoboth rural
+0305, hardap, rehoboth urban east, rehoboth urban east
+0306, hardap, rehoboth urban west, rehoboth urban west
+0307, hardap, aranos, mariental rural
+0308, hardap, daweb, gibeon
+0401, kavango east, mashare, mashare
+0402, kavango east, mukwe, mukwe
+0403, kavango east, ndiyona, ndiyona
+0404, kavango east, ndonga linena, ndiyona
+0405, kavango east, rundu rural, rundu rural east
+0406, kavango east, rundu urban, rundu urban
+0501, kavango west, kapako, kapako
+0502, kavango west, mankumpi, kahenge
+0503, kavango west, mpungu, mpungu
+0504, kavango west, musese, kahenge
+0505, kavango west, ncamangoro, kapako
+0506, kavango west, ncuncuni, rundu rural west
+0507, kavango west, nkurenkuru, mpungu
+0508, kavango west, tondoro, kahenge
+0601, khomas, john pandeni, soweto
+0602, khomas, katutura central, katutura central
+0603, khomas, katutura east, katutura east
+0604, khomas, khomasdal north, khomasdal north
+0605, khomas, moses ??garo?«b, moses //garoÃ«b
+0606, khomas, samora machel, samora machel
+0607, khomas, tobias hainyeko, tobias hainyeko
+0608, khomas, windhoek west, windhoek west
+0609, khomas, windhoek east, windhoek east
+0610, khomas, windhoek rural, windhoek rural
+0701, kunene, epupa, epupa
+0702, kunene, kamanjab, kamanjab
+0703, kunene, khorixas, khorixas
+0704, kunene, opuwo rural, opuwo
+0705, kunene, opuwo urban, opuwo
+0706, kunene, outjo, outjo
+0707, kunene, sesfontein, sesfontein
+0801, ohangwena, eenhana, eenhana
+0802, ohangwena, endola, endola
+0803, ohangwena, engela, engela
+0804, ohangwena, epembe, epembe
+0805, ohangwena, ohangwena, ohangwena
+0806, ohangwena, okongo, okongo
+0807, ohangwena, omulonga, omulonga
+0808, ohangwena, omundaungilo, omundaungilo
+0809, ohangwena, ondobe, ondobe
+0810, ohangwena, ongenga, ongenga
+0811, ohangwena, oshikango, oshikango
+0812, ohangwena, oshikunde, epembe
+0901, omaheke, aminuis, aminius
+0902, omaheke, epukiro, epukiro
+0903, omaheke, gobabis, gobabis
+0904, omaheke, kalahari, kalahari
+0905, omaheke, okorukambe, steinhausen
+0906, omaheke, otjinene, otjinene
+0907, omaheke, otjombinde, otjombinde
+1001, omusati, anamulenge, anamulenge
+1002, omusati, elim, elim
+1003, omusati, etayi, etayi
+1004, omusati, ogongo, ogongo
+1005, omusati, okahao, okahao
+1006, omusati, okalongo, okalongo
+1007, omusati, onesi, onesi
+1008, omusati, oshikuku, oshikuku
+1009, omusati, otamanzi, otamanzi
+1010, omusati, outapi, outapi
+1011, omusati, ruacana, ruacana
+1012, omusati, tsandi, tsandi
+1101, oshana, okaku, okaku
+1102, oshana, okatana, okatana
+1103, oshana, okatyali, okatyali
+1104, oshana, ompundja, ompundja
+1105, oshana, ondangwa rural, ondangwa
+1106, oshana, ondangwa urban, ondangwa
+1107, oshana, ongwediva, ongwediva
+1108, oshana, oshakati east, oshakati east
+1109, oshana, oshakati west, oshakati west
+1110, oshana, uukwiyu, uukwiyu
+1111, oshana, uuvudhiya, uuvudhiya
+1201, oshikoto, eengodi, eengodi_okankolo_guinas_tsumeb
+1202, oshikoto, guinas, eengodi_okankolo_guinas_tsumeb
+1203, oshikoto, nehale lyampingana, eengodi_okankolo_guinas_tsumeb
+1204, oshikoto, okankolo, eengodi_okankolo_guinas_tsumeb
+1205, oshikoto, olukonda, olukonda
+1206, oshikoto, omuntele, omuntele
+1207, oshikoto, omuthiyagwiipundi, omuthiyagwiipundi
+1208, oshikoto, onayena, onayena
+1209, oshikoto, oniipa, oniipa
+1210, oshikoto, onyaanya, onyaanya
+1211, oshikoto, tsumeb, eengodi_okankolo_guinas_tsumeb
+1301, otjozondjupa, grootfontein, grootfontein
+1302, otjozondjupa, okahandja, okahandja
+1303, otjozondjupa, okakarara, okakarara
+1304, otjozondjupa, omatako, omatako
+1305, otjozondjupa, otavi, otavi
+1306, otjozondjupa, otjiwarongo, otjiwarongo
+1307, otjozondjupa, tsumkwe, tsumkwe
+1401, zambezi, judea lyaboloma, linyanti
+1402, zambezi, kabbe north, kabbe
+1403, zambezi, kabbe south, kabbe
+1404, zambezi, katima mulilo rural, katima mulilo rural
+1405, zambezi, katima mulilo urban, katima mulilo urban
+1406, zambezi, kongola, kongola
+1407, zambezi, linyanti, linyanti
+1408, zambezi, sibbinda, sibbinda

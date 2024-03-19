@@ -1,0 +1,107 @@
+0101, caprivi, kabbe
+0102, caprivi, katima mulilo rural
+0103, caprivi, katima mulilo urban
+0104, caprivi, kongola
+0105, caprivi, linyanti
+0106, caprivi, sibbinda
+0201, erongo, arandis
+0202, erongo, daures
+0203, erongo, karibib
+0204, erongo, omaruru
+0205, erongo, swakopmund
+0206, erongo, walvis bay rural
+0207, erongo, walvis bay urban
+0301, hardap, gibeon
+0302, hardap, mariental rural
+0303, hardap, mariental urban
+0304, hardap, rehoboth rural
+0305, hardap, rehoboth urban east
+0306, hardap, rehoboth urban west
+0401, karas, berseba
+0402, karas, karasburg
+0403, karas, keetmanshoop rural
+0404, karas, keetmanshoop urban
+0405, karas, luderitz
+0406, karas, oranjemund
+0501, kavango, kahenge
+0502, kavango, kapako
+0503, kavango, mashare
+0504, kavango, mpungu
+0505, kavango, mukwe
+0506, kavango, ndiyona
+0507, kavango, rundu rural west
+0508, kavango, rundu urban
+0509, kavango, rundu rural east
+0601, khomas, tobias hainyeko
+0602, khomas, katutura central
+0603, khomas, katutura east
+0604, khomas, khomasdal north
+0605, khomas, soweto
+0606, khomas, samora machel
+0607, khomas, windhoek east
+0608, khomas, windhoek rural
+0609, khomas, windhoek west
+0610, khomas, moses //garoëb
+0701, kunene, epupa
+0702, kunene, kamanjab
+0703, kunene, khorixas
+0704, kunene, opuwo
+0705, kunene, outjo
+0706, kunene, sesfontein
+0801, ohangwena, eenhana
+0802, ohangwena, endola
+0803, ohangwena, engela
+0804, ohangwena, epembe
+0805, ohangwena, ohangwena
+0806, ohangwena, okongo
+0807, ohangwena, omundaungilo
+0808, ohangwena, ondobe
+0809, ohangwena, ongenga
+0810, ohangwena, oshikango
+0811, ohangwena, omulonga
+0901, omaheke, aminius
+0902, omaheke, gobabis
+0903, omaheke, kalahari
+0904, omaheke, otjinene
+0905, omaheke, otjombinde
+0906, omaheke, steinhausen
+0907, omaheke, epukiro
+1001, omusati, anamulenge
+1002, omusati, elim
+1003, omusati, etayi
+1004, omusati, ogongo
+1005, omusati, okahao
+1006, omusati, okalongo
+1007, omusati, onesi
+1008, omusati, oshikuku
+1009, omusati, outapi
+1010, omusati, ruacana
+1011, omusati, tsandi
+1012, omusati, otamanzi
+1101, oshana, okaku
+1102, oshana, okatana
+1103, oshana, okatyali
+1104, oshana, ompundja
+1105, oshana, ondangwa
+1106, oshana, ongwediva
+1107, oshana, oshakati east
+1108, oshana, oshakati west
+1109, oshana, uukwiyu
+1110, oshana, uuvudhiya
+1201, oshikoto, eengodi
+1202, oshikoto, guinas
+1203, oshikoto, okankolo
+1204, oshikoto, olukonda
+1205, oshikoto, omuntele
+1206, oshikoto, omuthiyagwiipundi
+1207, oshikoto, onayena
+1208, oshikoto, oniipa
+1209, oshikoto, onyaanya
+1210, oshikoto, tsumeb
+1301, otjozondjupa, grootfontein
+1302, otjozondjupa, okahandja
+1303, otjozondjupa, okakarara
+1304, otjozondjupa, omatako
+1305, otjozondjupa, otavi
+1306, otjozondjupa, otjiwarongo
+1307, otjozondjupa, tsumkwe
