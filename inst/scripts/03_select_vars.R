@@ -1,5 +1,5 @@
 
-devtools::load_all()
+#devtools::load_all()
 
 #------------------------------------------------------------------------------#
 ## environment set up
@@ -39,7 +39,7 @@ nam_selvars_list <-
                             y = "lwel_PPP",
                             weights = "hhweight",
                             selection = "BIC",
-                            stata_path = "C:/Users/wb604749/Desktop/Stata17/StataMP-64.exe", # change this
+                            stata_path = "C:/Users/wb604749/Stata17/StataMP-64.exe", # change this
                             stata_vnum = 17)
 
 #------------------------------------------------------------------------------#

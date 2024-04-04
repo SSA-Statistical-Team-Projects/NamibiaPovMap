@@ -3,6 +3,4 @@
 .Rdata
 .httr-oauth
 .DS_Store
-data-raw
-data-clean
-
+data-raw/Namibia_Data

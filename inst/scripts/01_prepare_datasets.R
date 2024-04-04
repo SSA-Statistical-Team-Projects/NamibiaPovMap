@@ -17,7 +17,7 @@ pacman::p_load(dplyr, here, descr, data.table, tidyr, stats,  haven)
 
 
 # source(here("R/01_littleworkerfunctions.R"))
-load(here("inst/data/cencus_dt.RData"))
+load(here("inst/data/census_dt.RData"))
 load(here("inst/data/survey_dt.RData"))
 
 #------------------------------------------------------------------------------#

@@ -29,7 +29,7 @@ Imports:
     pacman,
     descr,
     haven,
-    rgdal,
+    povmap,
     here,
     pacman
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1

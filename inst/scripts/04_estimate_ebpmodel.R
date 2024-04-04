@@ -10,9 +10,8 @@ options(
   start.time= Sys.time()
 )
 
-devtools::install_github("SSA-Statistical-Team-Projects/EMDIplus")
 
-pacman::p_load(emdi)
+pacman::p_load(povmap)
 #------------------------------------------------------------------------------#
 
 nam_selvars_list <- readRDS("data-raw/nam_selvars_list.RDS")
@@ -30,7 +29,7 @@ census_dt["wta_hh"] <- lapply(haven::zap_labels(census_dt["wta_hh"]) ,as.numeric
 nam_selvars_list  <- intersect(intersect(nam_selvars_list, names(survey_dt)), names(census_dt))
 
 
-nam_model <- emdiplus::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
+nam_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
                                                                collapse= "+"))),
                  pop_data = as.data.frame(na.omit(census_dt[, c(nam_selvars_list,
                                                                 "const_code","wta_hh")])),
