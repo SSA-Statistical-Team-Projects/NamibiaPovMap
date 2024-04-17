@@ -1,0 +1,46 @@
+---
+output: github_document
+---
+
+## Poverty Mapping in Namibia : Reproducibility Guidelines
+
+The goal of NamibiaPovMap is to create a poverty map for Namibia using the Census EB methodology. This ReadME shows how to reproduce all the tables and results in the paper. 
+
+## System Set-Up
+1) Please clone the repository and open up the project within RStudio. Make sure you are in the project environment. In the top right corner you will see the “NamibiaPovMap” beside the R logo to show you are in the project’s environment. This is extremely important. Otherwise you cannot automatically load the user defined functions.
+
+2) Please install the R devtools package, run install.packages("devtools")
+
+3) Open README.Rmd and go ahead and knit the Markdown file. This file is basically running the script that produces the poverty map.
+
+
+Please see code and outputs below: 
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+
+pacman::p_load("here", "kable", "kableExtra")
+
+```
+
+
+```{r, include = TRUE, echo = FALSE}
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
