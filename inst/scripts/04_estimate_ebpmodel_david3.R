@@ -38,8 +38,8 @@ survey_dt[, !duplicated(colnames(survey_dt)), with = F] %>%
                           w = wta_hh,
                           na.rm = TRUE))
 
-# remotes::install_github("SSA-Statistical-Team-Projects/povmap",
-#                         ref = "david3")
+remotes::install_github("SSA-Statistical-Team-Projects/povmap",
+                        ref = "david3")
 
 log_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
                                                                collapse= "+"))),
@@ -57,14 +57,15 @@ log_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
                  threshold = 6249,
                  pop_weights = "wta_hh",
                  weights = "wta_hh",
+                 weights_type = "hybrid",
                  L = 0,
                  B = 100,
                  cpus = 30,
                  MSE = TRUE,
                  na.rm = TRUE,
-                 Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_log.csv")
+                 Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_log_david3.csv")
 #------------------------------------------------------------------------------#
-saveRDS(log_model, "data-clean/estimation_results/unitmodel_log.RDS")
+saveRDS(log_model, "data-clean/estimation_results/unitmodel_log_david3.RDS")
 
 
 ord_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
@@ -83,14 +84,14 @@ ord_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
                          threshold = 6249,
                          pop_weights = "wta_hh",
                          weights = "wta_hh",
-                         L = 100,
+                         L = 0,
                          B = 100,
                          cpus = 30,
-                         MSE = FALSE,
+                         MSE = TRUE,
                          na.rm = TRUE,
-                         Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_ord.csv")
+                         Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_ord_david3.csv")
 #------------------------------------------------------------------------------#
-saveRDS(ord_model, "data-clean/estimation_results/unitmodel_ordernorm.RDS")
+saveRDS(ord_model, "data-clean/estimation_results/unitmodel_ordernorm_david3.RDS")
 
 
 bcx_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
@@ -115,9 +116,9 @@ bcx_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
                          cpus = 30,
                          MSE = FALSE,
                          na.rm = TRUE,
-                         Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx.csv")
+                         Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx_david3.csv")
 #------------------------------------------------------------------------------#
-saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_boxcox.RDS")
+saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_boxcox_david3.RDS")
 
 
 logshift_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
@@ -142,9 +143,9 @@ logshift_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_s
                               cpus = 30,
                               MSE = FALSE,
                               na.rm = TRUE,
-                              Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx.csv")
+                              Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx_david3.csv")
 #------------------------------------------------------------------------------#
-saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_boxcox.RDS")
+saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_boxcox_david3.RDS")
 
 
 

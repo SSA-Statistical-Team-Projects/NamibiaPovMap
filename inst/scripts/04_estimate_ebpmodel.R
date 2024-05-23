@@ -140,7 +140,7 @@ logshift_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_s
                               L = 100,
                               B = 100,
                               cpus = 30,
-                              MSE = FALSE,
+                              MSE = TRUE,
                               na.rm = TRUE,
                               Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx.csv")
 #------------------------------------------------------------------------------#

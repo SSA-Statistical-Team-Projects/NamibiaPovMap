@@ -228,3 +228,101 @@ hist_plot <- function(dt, var, weights, col)
   return(hist)
 
 }
+
+
+
+find_optlambda <- function(lambda,
+                           dt,
+                           cand_vars,
+                           delta_start,
+                           q_start) {
+
+  tryCatch(
+    {
+      glm1 <- glmmLasso(
+        as.formula(paste("lnrpc_tot_cons ~ ", paste(cand_vars, collapse = "+"))),
+        rnd = list(targetarea_codes = ~1),
+        family = gaussian(link = "identity"),
+        data = na.omit(dt),
+        lambda = lambda,
+        switch.NR = TRUE,
+        final.re = TRUE,
+        control = list(start = delta_start, q_start = q_start)
+      )
+      return(glm1$bic)
+    },
+    error = function(e) Inf
+  )
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
