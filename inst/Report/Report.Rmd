@@ -1,336 +1,143 @@
 ---
-title: "DESCRIPTIVE ANALYSIS : Census Vs Survey"
-
-output:
-  html_document:
-    df_print: paged
-    geometry: "a4paper, margin=2cm,2cm,2cm,2cm"
+title: "Small Area Estimation of Poverty in Namibia: The Census EBP Approach"
+author: "Ifeanyi Edochie"
+date: "2024-06-20"
+output: 
+  bookdown::word_document2:
+    reference_docx: report_style.docx
+fontsize: 10pt
+always_allow_html: true
+bibliography: bibliography.bib
 ---
-
 ```{r setup, include=FALSE}
-
-### Pacages used
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load("here")
-library(ggplot2)
-library(gridExtra)
-library(dplyr)
-library(tidyr)
-library(weights)
-library(descr)
-library(knitr)
-library(data.table)
-library(RStata)
-library(stats)
-library(haven)
 
-load(here("inst/data/cencus_dt.RData"))
-load(here("inst/data/survey_dt.RData"))
+pacman::p_load(povmap, flextable, tidyverse, here, ggplot2, sf, sfnetworks, kableExtra, data.table, 
+               viridis, paletteer, ggthemes, gridExtra, grid, flextable,
+               showtext, extrafont, bookdown, officer, ggExtra)
 
-#Some changes to the data
-
-
-census_dt$constituency_name <-  ifelse(
-                               census_dt$constituency_name %in% c(" eengodi",
-                                                      " okankolo", " guinas",
-                                            " tsumeb"), " nehale lyampingana",
-                                              census_dt$constituency_name)
-
-census_dt$const_code <-  ifelse(
-                             census_dt$const_code %in% c("1201", "1202",
-                                                 "1203","1210"), "1203",
-                                                census_dt$const_code)
-
-survey_dt$contituency_name <-  ifelse(
-                                survey_dt$contituency_name %in% c(" eengodi",
-                                                " okankolo", " guinas",
-                                          " tsumeb"), " nehale lyampingana",
-                                        survey_dt$contituency_name)
-
-
-survey_dt$new_const_code <- NA
-for (i in 1:nrow(survey_dt)) {
-  match_row <- which(census_dt$constituency_name == survey_dt$contituency_name[i] |
-                       census_dt$constituency_name == survey_dt$contituency_prev_name[i])
-  if (length(match_row) > 0) {
-    survey_dt$new_const_code[i] <- census_dt$const_code[match_row[1]]
-  }
-}
-
-survey_dt$internet <- recode(survey_dt$internet, "Subscribed in the house"="Yes",
-                                    " Accessible outside the house" ="Yes" ,
-                                     "Either"="Yes",
-                                    "No internet"= "No")
-
-survey_dt$wta_hh <-as.numeric(survey_dt$wta_hh)
-census_dt["wta_hh"] <- lapply(haven::zap_labels(census_dt["wta_hh"]) ,as.numeric)
-
-
-
-
-#### Functions used
-
-missing_var <- function(dt)
-    {
-            df <- data.frame(dt)
-            missing_count <- colSums(is.na(df))
-            missing_cols <- which(missing_count == nrow(df))
-            names(df[, missing_cols])
-            }
-
-
-cand_var <- function(pop_dt, smp_dt, oth_var) {
-          pop_df <- data.frame(pop_dt)
-          smp_df <- data.frame(smp_dt)
-          common_vars <- intersect(names(pop_df),names(smp_df))
-          res <- common_vars[!(common_vars %in% oth_var)]
-          fin_res <- intersect(res[!(res %in% missing_var(smp_df))],
-                            res[!(res %in% missing_var(pop_df))])
-
-          return(fin_res) 
-    }
-
-
-
-
-dummify <- function(x)
-    {
-      if(is.matrix(x) || is.data.frame(x)) {
-        x <- as.data.frame(x)
-        y <- do.call(data.frame, lapply(x, dummify))
-        return(as.matrix(y))
-      }
-      # x is 1-dimensional
-            if(is.complex(x))
-              return(as.matrix(data.frame(Re=Re(x), Im=Im(x))))
-            # convert factors etc
-            if(is.character(x))
-              x <- factor(x)
-            if(is.logical(x))
-              x <- factor(x, levels=c(FALSE,TRUE))
-            if(is.factor(x)) {
-              # convert to dummy variables
-              nx <- length(x)
-              lev <- levels(x)
-              y <- matrix(0L, nrow=nx, ncol=length(lev))
-              colnames(y) <- lev
-              y[cbind(seq_len(nx), as.integer(x))] <- 1L
-      return(y)
-      }
-      # convert to numeric
-      y <- as.numeric(x)
-      if(!is.matrix(y))
-        y <- matrix(y, ncol=1)
-      
-      return(y)
-}
-
-
-compar_test_means<- function(smp_data,
-                           pop_data,
-                           var,
-                           smp_weights,
-                           pop_weights)
-    {
-  
-              ### get the set of complete cases of the variables as
-              ### would have been used in model estimation
-              smp_df <- smp_data[complete.cases(c(var, smp_weights)),
-                                 c(var, smp_weights)]
-              pop_df <- pop_data[complete.cases(c(var, pop_weights)),
-                                 c(var, pop_weights)]
-              
-              smp_means_df <- data.frame(smp_means = colMeans(smp_df[var]),
-                                         smp_sd = apply(X = smp_df[var],
-                                                        MARGIN = 2,
-                                                        FUN = sd,
-                                                        na.rm = TRUE),
-                                         variable = var)
-              
-              pop_means_df <- data.frame(pop_means = colMeans(pop_df[var]),
-                                         pop_sd = apply(X = pop_df[var],
-                                                        MARGIN = 2,
-                                                        FUN = sd,
-                                                        na.rm = TRUE),
-                                         variable = var)
-              
-              means_df <- merge(smp_means_df, pop_means_df, by = "variable")
-              means_df$diff_sd <- sqrt((means_df$smp_sd)^2 + (means_df$pop_sd)^2)
-              means_df$diff <- means_df$pop_means - means_df$smp_means
-              means_df$zscore <- means_df$diff / means_df$diff_sd
-              means_df$pvalue <- 2 * (1 - pnorm(abs(means_df$zscore)))
-  
-  return(means_df[, c("variable", "smp_means", "pop_means", "diff", "pvalue")])
-  
-    }
-
-
-ebp_test_means <- function(smp_data,
-                           pop_data,
-                           varlist,
-                           smp_weights,
-                           pop_weights)
-    {
-
-  ### get the set of complete cases of the variables as
-  ### would have been used in model estimation
-  smp_df <- smp_data[complete.cases(c(varlist, smp_weights)),
-                     c(varlist, smp_weights)]
-  pop_df <- pop_data[complete.cases(c(varlist, pop_weights)),
-                     c(varlist, pop_weights)]
-
-
-  smp_means_df <- data.frame(smp_means = colMeans(smp_df[,varlist]),
-                             smp_sd = apply(X = smp_df[,varlist],
-                                            MARGIN = 2,
-                                            FUN = sd,
-                                            na.rm = TRUE),
-                             variable = varlist)
-
-  pop_means_df <- data.frame(pop_means = colMeans(pop_df[,varlist]),
-                             pop_sd = apply(X = pop_df[,varlist],
-                                            MARGIN = 2,
-                                            FUN = sd,
-                                            na.rm = TRUE),
-                             variable = varlist)
-
-  means_df <- merge(smp_means_df, pop_means_df, by = "variable")
-  means_df$diff_sd <- sqrt((means_df$smp_sd)^2 + (means_df$pop_sd)^2)
-  means_df$diff <- means_df$pop_means - means_df$smp_means
-  means_df$zscore <- means_df$diff / means_df$diff_sd
-  means_df$pvalue <- 2 * (1 - pnorm(abs(means_df$zscore)))
-  return(means_df[, c("variable", "smp_means", "pop_means", "diff", "pvalue")])
-
-    }
-
-
-
-hist_plot <- function(dt, var, weights, col)
-     {
-         
-          dt[[weights]] <- as.numeric(dt[[weights]])
-          dt[[var]] <- as.numeric(dt[[var]])
-          y <- as.data.frame(wtd.table(x = dt[[var]], weights = dt[[weights]]), col.names = c(var,"Proportion"))
-          y[,2] <- prop.table(y[,2])
-          hist <- ggplot(y, aes(x = !!sym(var), y=Proportion,fill="Census")) +
-          geom_bar(stat = "identity") +
-          xlab(paste("variable ", var, sep="")) +
-          ylab("Proportion") +
-          scale_fill_manual(values = col)+
-          labs(fill="") +
-          ggtitle(paste("Histogram of variable ", var, sep=""))
- 
- return(hist)
-  
-}
-
-
-
-countrymodel_select_stata <- function(dt,
-                                      xvars,
-                                      y,
-                                      weights,
-                                      selection = "BIC",
-                                      stata_path,
-                                      stata_vnum){
-
-  dt <- as.data.table(dt)
-
-  if(is.null(weights) == FALSE){
-
-    dt <- na.omit(dt[,c(y, xvars, weights, "ea_id"), with = F])
-
-    weights <- dt[, weights, with = F]
-
-    #weights <- scale(weights)
-
-  } else {
-
-    dt <- na.omit(dt[,c(y, xvars, "ea_id"), with = F])
-
-    weights <- 1
-
-  }
-
-  xset <- dt[, xvars, with = F]
-
-  y <- dt[, y, with = F]
-
-  df <- as.data.frame(dt)
-  names(df) <- abbreviate(names(df), minlength = 32)
-
-  x <- colnames(xset)
-
-  haven::write_dta(data = df, path = "./data.dta")
-
-  options("RStata.StataPath" = stata_path)
-  options("RStata.StataVersion" = stata_vnum)
-
-  stata_src <- c("use data.dta, replace",
-                 paste0("lassowrapper ", colnames(y), " ", x[1], "-",
-                        x[length(x)],", weights(hhweight) force(areadummy*) select(bic, postsel) cluster(ea_id) input(data.dta) output(model.txt)"))
-
-  RStata::stata(src = stata_src)
-
-  var_list <- readLines("model.txt")
-
-  ### separate the long string by space
-
-  var_list <- strsplit(var_list, " +")[[1]]
-
-  var_list <- var_list[!(grepl("o.areadummy", var_list))]
-
-  var_list <- stringr::str_replace_all(var_list, "covrfrctn", "coverfraction")
-  var_list <- stringr::str_replace_all(var_list, "coverfrctn", "coverfraction")
-
-  return(var_list)
-
-
-}
 
 ```
 
+## Introduction
 
-### selection of variables to be compared between the census and the survey.
-We used the `missing_var( )` and `cand_var( ) ` functions.
+The Republic of Namibia, a rapidly urbanizing country in southwestern Africa with a small population of 3 million people (2023), faces poverty and inequality levels that are high for its income level. The country borders Angola and Zambia (north), Botswana (east), South Africa (south), and the Atlantic Ocean (west), lying within the Namib and Kalahari (semi-arid) deserts, and is one of the driest countries of sub-Saharan Africa. Its economy depends on agriculture, tourism, and mining (particularly diamonds and metals). Strong economic growth, improvements in labor incomes and educational attainment, and the expansion of social protection programs, helped significantly reduce poverty from 37.5 in 2003/04 to 17.4 percent in 2015/16 (the last available poverty data; using the official poverty line). Despite these improvements, Namibia continues to face one of the highest levels of income inequality in the world, with a per adult equivalent consumption Gini coefficient of 57.6 percent in 2015.
+
+Namibia made considerable progress since independence, with steady increases in access to education, water, sanitation, and electricity. However, access remains much weaker in certain parts of the country and especially in historically disadvantaged communities. In addition, the country’s relatively high poverty rate (for its income level) remains strongly correlated with lagging human capital and poor access to basic services. Deep inequalities remain in the distribution of resources, opportunities, and income. The country experiences prolonged droughts and growing water insecurities, with urbanization and economic growth increasing the demand for water. The poorest population, particularly in rural areas, are particularly vulnerable to weather-related shocks. 
+
+Poverty maps are useful to help visualize and understand the distribution of poverty at a much more granular level, which allows for better targeted policymaking. The national poverty rate, or even poverty rates by region, can hide large intraregional differences in poverty. By showing the incidence of poverty at very disaggregated levels, in the case of Namibia at the 107 constituency levels, poverty maps can help improve targeting to reduce poverty and inequality, improve public service delivery, and strengthen crisis response. This report presents the constituency-level poverty map of Namibia using the small area estimation (SAE) technique based on the (latest available) 2015/16 Namibia Household Income and Expenditure Survey (NHIES) and the Namibia 2011 Population and Housing Census. The combination of the NHIES data (which captures a sample of household data for measuring poverty at more aggregated levels) and the Census data (which collects information from every household but does not include expenditure data for poverty measurement) allows for the estimation of monetary poverty indicators at the constituency level in Namibia. 
+
+The Unit Level Small Area Estimation methodology
+
+We estimate constituency level headcount poverty rates using a one-fold nested error empirical best predictor (EBP) household (unit) level model [@battese1988error, @jiang2006mixed, @molinarao, @tzavidis2018start]. We predict household welfare, i.e. log per capita consumption, as a linear function of the survey variables/features at the household level. The assumption is that per capita household welfare is a function of survey indicators, a random area (constituency) specific effect, and a household level idiosyncratic error term. 
+
+More formally, assume that $X = (x_0, ..., x_p)^T$ is the design matrix containing p auxiliary features. The model is defined by: 
+
+$$ Y_{ch}~ =~ x^T_{ch}\beta + \mu_c + e_{ch}, \quad h = 1,...,n_i, \quad i = 1,...,D \quad\quad \mu_c \sim N(0, \sigma^2_\mu), \quad e_{ch} \sim N(0, \sigma^2_e)$$
+
+where $Y_{ch}$ represents the log household per capita welfare, $x^T_{ch}$ is a transposed vector of household level features and $\beta$ is a vector of the regression coefficients (both $x^T_{ch}$ and $\beta$ have a length of $p+1$, including the intercept). $\mu_c$ and $e_{ch}$ refer to the random commune specific effects and unit level error terms, respectively, which are assumed to be $iid$, independently identically distributed random variables. The constituency effect $\mu_c$ is conditioned on the sample data $Y_ch$. 
+
+The empirical EBP estimation process works as follows: 
+
+1) Use the household survey to fit the above-described model to estimate $\hat\beta$, $\hat\sigma_\mu$, $\hat\sigma_{ch}$ parameters. Restricted Maximum Likelihood (REML) is used to compute $\hat\sigma_\mu$, $\hat\sigma_{ch}$ using the nlme [@pinheiro2018nlme] R package. The parameters are used to calculate the shrinkage factor $$ \hat\gamma = \frac{\sigma^2_u}{\sigma^2_\mu+\sigma^2_e\delta_c}$$ where $$ \delta_c = \frac{\sum_{h\in C} w^2_i}{(\sum_{h\in C}w_i)^2}.w_i$$ is the sample weight for household $i$ and $\delta_c$ is therefore the ratio fo the squared sum of weights to the square of the sum of weights for each constituency, c.
+
+2) For in-sample target areas, $Y_{ch}$ is estimated L = 100 times as follows $ y^{*(l)}_{ch} = x^T_{ch}\beta + \hat\mu_c + v^{(l)}_c + e^{(l)}_{ch}$ where $v^{(l)}_h \sim N(0, \sigma^2_\mu(1-\hat\gamma_c))$ and $\hat\mu_c = E[\mu_c|y^{*(l)}_{ch}]$, the expected value of the constituency effect given the sample data. For the out-of-sample constituencies, there is a no sample data to condition on, so $\hat\gamma_c = 0$ and $\hat\mu_c = 0$. Therefore, for these constituencies, $ y^{*(l)}_{ch} = x^T_{ch}\beta + v^{(l)}_c + e^{(l)}_{ch}$ and the estimates are purely synthetic predictions. 
+
+3) We take the exponential of $y^{*(l)}_{ch}$ to transform all $L$ monte carlo simulations back to the original scale. We apply the poverty line (6249 Namibian dollars, which is the upper bound poverty line) to $Y_{ch}$ for each of the $L$ simulations to estimate poverty rates for each simulation, and then average the estimated poverty rates over the simulations. Mean square error, a measure of uncertainty, is estimated through the parametric bootstrap procedure implemented in the povmap package [@gonzalez2007estimation]. See [@edochie2024small, @kreutzmann2019r] for more details.
 
 
-selection of variables to be compared between the census and the survey.
+## Data Sources
 
-```{r }
-ID <- c("hid","region_code", "region_name", "const_code","wta_hh", "wta_pop" )
-cand_varlist <-cand_var(pop_dt = census_dt, smp_dt = survey_dt, oth_var=ID)
+### Namibia Household Income and Expenditure Survey (2015/2016)
+The Namibia Household Income and Expenditure Survey (NHIES) is a household-based survey that collects data to measure the living conditions of the Namibian population, including poverty indicators. Information is collected on the actual patterns of consumption and income, and a range of other socio-economic indicators including demographic factors, housing and utilities, access to services, health, education, main source of income, household indebtedness and ownership and access to assets. The NHIES 2015/16 is a representative sample of 10,368 households from 864 primary sampling units (PSUs). The primary sampling frame used for this survey is a list of PSUs based on the 2011 Population and Housing Census Enumeration Areas (EAs). A PSU can be one EA, part of an EA, or more than one EA. A secondary sampling frame for each of the selected PSUs was created for the purpose of selecting the sample households through a listing procedure. The data was collected over a 12-month period consisting of 24 survey rounds, between March 27, 2015, and March 21, 2016. The survey was divided into four quarters and each quarter was further divided into survey rounds. A sample of 12 households were selected within each selected PSU. The survey is representative at the national level, by urban-rural, and by 14 regions (!Karas, Erongo, Hardap, Kavango East, Kavango West, Khomas, Kunene, Ohangwena, Omaheke, Omusati, Oshana, Oshikoto, Otjozondjupa, and Zambezi).  
+
+### Namibia 2011 Population and Housing Census
+The 2011 Population and Housing Census was undertaken in August 2011 (from August 28 to September 15, with August 28 marked as the reference period or “Census Day”) and is the main source for demographic and socio-economic statistics in the country. It provides information on the size, distribution, composition and other social and economic characteristics of the population as well as on household and housing amenities. The population characteristics include the population’s spatial distribution, age and sex composition, marital status, education, literacy, economic activity, orphanhood, and disability. The household and housing conditions include household size, housing amenities, household ownership, and the quality of housing. The 2011 Census reported a total population of 2,113,077 Namibians in 465,400 households. The population was split 43 percent urban (903,434 people) and 57 percent rural (1,209,643). The largest urban center was the capital of Windhoek with a population of 325,858 people.  In 2011, Namibia was divided into 13 regions: Caprivi (called Zambezi in the 2015/16 NHIES), Karas (changed to !Karas in the NHIES), Erongo, Hardap, Kavango (split into East and West in the NHIES), Khomas, Kunene, Ohangwena, Omaheke, Omusati, Oshana, Oshikoto, and Otjozondjupa. These regions were further subdivided into 107 constituencies in 2011 (which became 121 in 2013 based on the fourth Boundaries Delimitation and Demarcation Commission). There were 53 proclaimed towns and villages in Namibia in 2011.
+
+
+## The Variable Selection Algorithm
+As presented in the previous sectionschapters, the aim is to estimate a model of per capita household consumption for the survey and then useing the model to predict the distribution of per capita welfare within the census. Consequently, selecting the optimal set of indicators from the household survey is essential to the poverty mapping exercise. We create a set of harmonized variables between the NHIES 2015/16 survey and the 2011 census, surveys i.e. 290 variables with the same definitions between both census and survey data. These include indicators for household asset ownership (dummy variables for household ownership of cars, internet, fridges, number of rooms, computer, phone, cellphone, land phone, sewing machine, washing machine, stove etc), education (household literacy rate, highest education attainment), disability (sight, hearing, walking and selfcare disability dummies), among others. 
+
+```{r, echo = FALSE}
+
+data.frame(`Indicator Class` = c("Household asset ownership status", "Education", 
+                                 "Household-dwelling characteristics",
+                                 "Sanitation", "Energy", "Location controls"),
+           Variables = c("Dummies for household ownership of cars, internet, fridges, number of rooms,
+                         computer phone, cellphone, landphone, sewing machine, washing machine,
+                         stove, bicycle, motorcycle, radio",
+                         "Household literacy rates, highest education attainment in household, whether ever
+                         attended school",
+                         "Household size, floor type, wall type, roof type, proportion of household members
+                         in specific age category",
+                         "Source of water, type of water pipe, garbage disposal type, toilet type",
+                         "Type of fuel for cooking and lighting, heating source dummies",
+                         "Provincial dummies, sector (rural, urban)")) %>%
+  flextable() %>%
+  set_table_properties(width = 1, layout = "autofit") %>%
+  fontsize(size = 10) %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  autofit() %>%
+  set_caption(caption = "EBP Model (Regression Results)",
+              style = "Table Caption",
+              autonum = run_autonum(seq_id = "tab", bkm = "tab1")) %>%
+  theme_box()
+
+
 ```
 
-We have used a function called `dummify( )`  that transforms the categorical variables into dummy variables, each representing a modality of the categorical variable.
+In predicting the welfare distribution of the census, a variable selection process is important to minimize both the error rate of the model and the risk of overfitting the model from including too many variables. As a result, we apply the Least Absolute Shrinkage Selector Operator (LASSO) algorithm method [@tibshirani1996regression] as follows: 
 
+$$ Min\quad e_{ch} = Y_{ch} - x^T_{ch}\beta$$
+$$ \lambda\beta = k$$
 
-```{r}
-## use of function dummify() and managing factor variable and categorical variables and producing statistics tables
+Consequently, high values of $\lambda$ will increase the rate at which elements of the $\beta$ vector approach 0 and are thus eliminated from the selection model. We use the AIC selection criterion [@akaike1974new] to chooe the optimal $\beta$ yielding the selected variables highlighted in the subsequent model results section. 
 
-cand_varlist = cand_var(pop_dt = census_dt, smp_dt = survey_dt, oth_var=ID)
-dt=data.frame(dummify(census_dt[cand_varlist]))
-new_varlist1=names(dt)
-dt2=cbind(census_dt, dt)[c(new_varlist1, cand_varlist, "wta_hh", "const_code")]
-
-yt=data.frame(dummify(survey_dt[cand_varlist]))
-new_varlist2=names(yt)
-yt2=cbind(survey_dt, yt)[c(new_varlist2, cand_varlist, "wta_hh", "new_const_code")]
-
-varlist=intersect(new_varlist1, new_varlist2)
-
-```
+The step-by-step process of variable selection is explained in Table \@ref(tab:tab2)
 
 
 
-```{r}
-ebp_test_means(smp_data =as.data.frame(na.omit(yt2[,c(varlist,"wta_hh")])),
-                  pop_data = as.data.frame(na.omit(dt2[,c(varlist,"wta_hh")])),
-                  varlist = varlist ,
-                  smp_weights ="wta_hh",
-                  pop_weights = "wta_hh" )
-#(Table,file="Descriptive_statistics.csv", row.names = FALSE)
-```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

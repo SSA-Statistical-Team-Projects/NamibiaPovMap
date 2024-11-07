@@ -55,14 +55,15 @@ log_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
                  smp_domains = "new_const_code",
                  transformation = "log",
                  threshold = 6249,
-                 pop_weights = "wta_hh",
+                 pop_weights = "hhsize",
                  weights = "wta_hh",
                  L = 100,
                  B = 100,
                  cpus = 30,
                  MSE = TRUE,
                  na.rm = TRUE,
-                 Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_log.csv")
+                 Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_log.csv",
+                 rescale_weights = TRUE)
 #------------------------------------------------------------------------------#
 saveRDS(log_model, "data-clean/estimation_results/unitmodel_log.RDS")
 
@@ -81,14 +82,15 @@ ord_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
                          smp_domains = "new_const_code",
                          transformation = "ordernorm",
                          threshold = 6249,
-                         pop_weights = "wta_hh",
+                         pop_weights = "hhsize",
                          weights = "wta_hh",
                          L = 100,
                          B = 100,
                          cpus = 30,
                          MSE = FALSE,
                          na.rm = TRUE,
-                         Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_ord.csv")
+                         Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_ord.csv",
+                         rescale_weights = TRUE)
 #------------------------------------------------------------------------------#
 saveRDS(ord_model, "data-clean/estimation_results/unitmodel_ordernorm.RDS")
 
@@ -115,7 +117,8 @@ bcx_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
                          cpus = 30,
                          MSE = FALSE,
                          na.rm = TRUE,
-                         Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx.csv")
+                         Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx.csv",
+                         rescale_weights = TRUE)
 #------------------------------------------------------------------------------#
 saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_boxcox.RDS")
 
@@ -142,7 +145,8 @@ logshift_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_s
                               cpus = 30,
                               MSE = FALSE,
                               na.rm = TRUE,
-                              Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx.csv")
+                              Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx.csv",
+                              rescale_weights = TRUE)
 #------------------------------------------------------------------------------#
 saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_boxcox.RDS")
 
@@ -190,7 +194,7 @@ shpmatch_dt <- fuzzyshp_dt[indices_dt$V1]
 shpmatch_dt <-
   shpmatch_dt %>%
   mutate(const_code = as.factor(const_code)) %>%
-  merge(nam_model$ind,
+  merge(log_model$ind,
         by.x = "const_code",
         by.y = "Domain") %>%
   select(CONST_ID, Head_Count) %>%
@@ -202,11 +206,11 @@ shp_dt <-
   merge(shpmatch_dt, on = "CONST_ID")
 
 
+
 saveRDS(shp_dt, "../MapBotsMibiaR/inst/data/nam_povertyshp.RDS")
 
 
-
-
+save.image(file = "data-clean/estimation_results/pmap_image.RData")
 
 
 
