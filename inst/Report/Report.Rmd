@@ -12,9 +12,17 @@ bibliography: bibliography.bib
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(povmap, flextable, tidyverse, here, ggplot2, sf, sfnetworks, kableExtra, data.table, 
-               viridis, paletteer, ggthemes, gridExtra, grid, flextable,
-               showtext, extrafont, bookdown, officer, ggExtra)
+pacman::p_load(povmap, flextable, tidyverse, here, ggplot2, sf, sfnetworks, 
+               kableExtra, data.table, viridis, paletteer, ggthemes, 
+               gridExtra, grid, flextable, showtext, extrafont, bookdown, 
+               officer, ggExtra, ggtext)
+
+
+# here::here(load("data-clean/estimation_results/pmap_image.RData"))
+
+load(here::here("data-clean", "estimation_results", "pmap_image.RData"))
+
+shp_dt <- readRDS(here::here("data-clean", "estimation_results", "povshapefile.RDS"))
 
 
 ```
@@ -33,7 +41,7 @@ We estimate constituency level headcount poverty rates using a one-fold nested e
 
 More formally, assume that $X = (x_0, ..., x_p)^T$ is the design matrix containing p auxiliary features. The model is defined by: 
 
-$$ Y_{ch}~ =~ x^T_{ch}\beta + \mu_c + e_{ch}, \quad h = 1,...,n_i, \quad i = 1,...,D \quad\quad \mu_c \sim N(0, \sigma^2_\mu), \quad e_{ch} \sim N(0, \sigma^2_e)$$
+$$ Y_{ch}~ =~ x^T_{ch}\beta + \mu_c + e_{ch}, \quad h = 1,...,n_i, \quad c = 1,...,D \quad\quad \mu_c \sim N(0, \sigma^2_\mu), \quad e_{ch} \sim N(0, \sigma^2_e)$$
 
 where $Y_{ch}$ represents the log household per capita welfare, $x^T_{ch}$ is a transposed vector of household level features and $\beta$ is a vector of the regression coefficients (both $x^T_{ch}$ and $\beta$ have a length of $p+1$, including the intercept). $\mu_c$ and $e_{ch}$ refer to the random commune specific effects and unit level error terms, respectively, which are assumed to be $iid$, independently identically distributed random variables. The constituency effect $\mu_c$ is conditioned on the sample data $Y_ch$. 
 
@@ -43,7 +51,11 @@ The empirical EBP estimation process works as follows:
 
 2) For in-sample target areas, $Y_{ch}$ is estimated L = 100 times as follows $ y^{*(l)}_{ch} = x^T_{ch}\beta + \hat\mu_c + v^{(l)}_c + e^{(l)}_{ch}$ where $v^{(l)}_h \sim N(0, \sigma^2_\mu(1-\hat\gamma_c))$ and $\hat\mu_c = E[\mu_c|y^{*(l)}_{ch}]$, the expected value of the constituency effect given the sample data. For the out-of-sample constituencies, there is a no sample data to condition on, so $\hat\gamma_c = 0$ and $\hat\mu_c = 0$. Therefore, for these constituencies, $ y^{*(l)}_{ch} = x^T_{ch}\beta + v^{(l)}_c + e^{(l)}_{ch}$ and the estimates are purely synthetic predictions. 
 
-3) We take the exponential of $y^{*(l)}_{ch}$ to transform all $L$ monte carlo simulations back to the original scale. We apply the poverty line (6249 Namibian dollars, which is the upper bound poverty line) to $Y_{ch}$ for each of the $L$ simulations to estimate poverty rates for each simulation, and then average the estimated poverty rates over the simulations. Mean square error, a measure of uncertainty, is estimated through the parametric bootstrap procedure implemented in the povmap package [@gonzalez2007estimation]. See [@edochie2024small, @kreutzmann2019r] for more details.
+3) We take the exponential of $$y^{(l)}_i=e^{y^{*(l)}_{ch}}$$ to transform all $L$ monte carlo simulations back to the original scale. We apply the poverty line (6249 Namibian dollars, which is the upper bound poverty line) to $Y_{ch}$ for each of the $L$ simulations to estimate poverty rates for each simulation, and then average the estimated poverty rates over the simulations. 
+
+$$ I^{EBP}_c = \frac{1}{L}\sum^L_{l=1}{I^{(l)}_{ch}{(y^{(l)}_i)}}$$
+
+Mean square error, a measure of uncertainty, is estimated through the parametric bootstrap procedure implemented in the povmap package [@gonzalez2007estimation]. See [@edochie2024small, @kreutzmann2019r] for more details.
 
 
 ## Data Sources
@@ -53,6 +65,45 @@ The Namibia Household Income and Expenditure Survey (NHIES) is a household-based
 
 ### Namibia 2011 Population and Housing Census
 The 2011 Population and Housing Census was undertaken in August 2011 (from August 28 to September 15, with August 28 marked as the reference period or “Census Day”) and is the main source for demographic and socio-economic statistics in the country. It provides information on the size, distribution, composition and other social and economic characteristics of the population as well as on household and housing amenities. The population characteristics include the population’s spatial distribution, age and sex composition, marital status, education, literacy, economic activity, orphanhood, and disability. The household and housing conditions include household size, housing amenities, household ownership, and the quality of housing. The 2011 Census reported a total population of 2,113,077 Namibians in 465,400 households. The population was split 43 percent urban (903,434 people) and 57 percent rural (1,209,643). The largest urban center was the capital of Windhoek with a population of 325,858 people.  In 2011, Namibia was divided into 13 regions: Caprivi (called Zambezi in the 2015/16 NHIES), Karas (changed to !Karas in the NHIES), Erongo, Hardap, Kavango (split into East and West in the NHIES), Khomas, Kunene, Ohangwena, Omaheke, Omusati, Oshana, Oshikoto, and Otjozondjupa. These regions were further subdivided into 107 constituencies in 2011 (which became 121 in 2013 based on the fourth Boundaries Delimitation and Demarcation Commission). There were 53 proclaimed towns and villages in Namibia in 2011.
+
+```{r, echo = FALSE}
+specify_decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
+
+
+descriptives_dt <- readRDS("inst/postestimation/tables/descriptives.RDS")
+# Table 1: Coefficient of Variation (CV) Table
+cv_table <- 
+  descriptives_dt$cv_table %>%
+  mutate(ebp_cv = specify_decimal(ebp_cv, 4),
+         direct_cv = specify_decimal(direct_cv, 4)) %>%
+  flextable() %>%
+  set_header_labels(indicator = "Area", ebp_cv = "EBP CV", direct_cv = "Direct CV") %>%
+  set_table_properties(width = 1, layout = "autofit") %>%
+  fontsize(size = 10) %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  theme_box() %>%
+  set_caption("Comparison of Coefficient of Variation (CV) between EBP and Direct Estimates",
+              style = "Table Caption",
+              autonum = run_autonum(seq_id = "tab", bkm = "tab1a"))
+
+# Table 2: Basic Information
+basicinfo_df <- 
+  descriptives_dt$basicinfo_df %>%
+  flextable() %>%
+  set_header_labels(indicator = "Indicator", census = "Census", survey = "Survey") %>%
+  set_table_properties(width = 1, layout = "autofit") %>%
+  fontsize(size = 10) %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  theme_box() %>%
+  set_caption("Basic Information on Units and Regions",
+              style = "Table Caption",
+              autonum = run_autonum(seq_id = "tab", bkm = "tab1b"))
+
+# Print the tables
+cv_table
+basicinfo_df
+
+```
 
 
 ## The Variable Selection Algorithm
@@ -93,12 +144,417 @@ $$ \lambda\beta = k$$
 
 Consequently, high values of $\lambda$ will increase the rate at which elements of the $\beta$ vector approach 0 and are thus eliminated from the selection model. We use the AIC selection criterion [@akaike1974new] to chooe the optimal $\beta$ yielding the selected variables highlighted in the subsequent model results section. 
 
-The step-by-step process of variable selection is explained in Table \@ref(tab:tab2)
+The step-by-step process of variable selection is explained in Table \@ref(tab:tab2).
+
+```{r, echo = FALSE}
+
+data.frame(Step = c("Survey & Census GMD Variable Harmonization",
+                    "Equivalent feature distribution check",
+                    "Model selection"),
+           `Process Explanation` = c("The same set of variables (deemed potential predictors of per capita
+                                     welfare) are created in the survey and census. We use the standard
+                                     Global Monitoring Database 2.0 Harmonization dictionary for the feature
+                                     creation process",
+                                     "We ensure that census and survey have similar distributions. In ideal
+                                     circumstances, the survey is drawn from the census i.e. a census and
+                                     survey in the same year. However, with the NHIES survey being from
+                                     2015 and the census in 2011, we perform a standard z-test to test that
+                                     for each feature the population mean (census 2011) is not
+                                     statistically different (p-value > 0.05) from the survey mean (NHIES
+                                     2015/16). We drop all variables for which we have to reject the (equal
+                                     means) null hypothesis.",
+                                     "Apply the LASSO algorithm with the ordinary least squares (OLS)
+                                     estimation. The use of the OLS model in this case may be less than
+                                     optimal being that the EB empirical model rather applies a linear
+                                     mixed effects approach.")) %>%
+  flextable() %>%
+  set_table_properties(width = 1, layout = "autofit") %>%
+  fontsize(size = 10) %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  autofit() %>%
+  set_caption(caption = "Step-by-Step summary of variable selection process",
+              style = "Table Caption",
+              autonum = run_autonum(seq_id = "tab", bkm = "tab2")) %>%
+  theme_box()
+
+
+```
+
+
+## EBP Unit Model Estimation Results
+One advantage of using the linear mixed effect modelling approach over recent developments in machine learning in the ease of interpretation of the coefficient estimates. The estimation results of the model can be found in table \@ref(tab:tab3), for the most part, appear consistent with expectations in terms of the direction of the signs of the estimates with a few exceptions. 
+
+Average welfare (measured as per capita household consumption) appears to be higher in Karas, Erongo, Hardap, Kavango, Khomas, Ohangwena, Omusati, Oshana, Oshikoto and Otjozondjupa provinces than in the Zambezi province (table \@ref(tab:tab3). In terms of household asset ownerships, households with no cellphone are more likely to have lower consumption levels (thus are more likely to be poor). In a similar vein, households with internet access and a landphone consume more than their counterparts without any digital access. Ironically, households with no computer are also better off. This could be a result of inaccurate data records. There is also a positive correlation between the number of rooms in the household dwelling and the per capita consumption. 
+
+In terms of energy use, those households that power (lighting and heating) their homes with electricity and use kerosene for lighting also consume more. Unsurprisingly, households with no energy use are more likely to have lower consumption. With regards to dwelling characteristics of the household, households with natural/sand flooring have consumption. 
+
+```{r, echo = FALSE}
+
+variables_dt <- read.csv("data-clean/estimation_results/variables.csv")
+
+ebp_reportcoef_table(log_model, decimals = 3) %>%
+  merge(variables_dt, by.x = "Variable", by.y = "variables") %>%
+  dplyr::select(label, coeff, std_error) %>%
+  rename(Variable = label,
+         Coefficients = coeff,
+         `Standard Error` = std_error) %>%
+  flextable() %>%
+  set_table_properties(width = 1, layout = "autofit") %>%
+  fontsize(size = 10) %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  autofit() %>%
+  set_caption(caption = "Mixed effects regression model",
+              style = "Table Caption",
+              autonum = run_autonum(seq_id = "tab", bkm = "tab3")) %>%
+  theme_box()
+
+  
+
+```
+Note: All variables are 0-1 dummies with the exception of "household size" and "number of rooms"
+
+
+Larger households are negatively correlated with per capita household consumption. Households with cohabitating relationship appear to be poorer than their married counterparts. Household welfare is also an increasing function of the quality of the roofing, flooring, wall material and sanitation facilities as well. In addition, households that can afford bottled water tend to have on average higher per capita consumption than those that do not. 
+
+We compare the distribution of household welfare between predicted and actual household consumption. See results in Figure \@ref(figcompwelf). 
+
+```{r figcompwelf, fig.cap = "Comparing Welfare Density Distributions in Census and Survey", echo = FALSE, warning=FALSE, message=FALSE}
+
+ydump_dt <- fread("//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_log.csv")
+
+ydump_dt <- 
+  ydump_dt %>%
+  mutate(hid = rep(census_dt$hid, 100)) %>%
+  group_by(hid, Domain) %>%
+  summarize(Simulated_Y = mean(Simulated_Y, na.rm = TRUE),
+            XBetahat = mean(XBetahat, na.rm = TRUE),
+            eta = mean(eta, na.rm = TRUE),
+            epsilon = mean(epsilon, na.rm = TRUE))
+
+welfare_dt <- data.frame(Welfare = log(c(ydump_dt$Simulated_Y, survey_dt$wel_PPP)),
+                         Source = factor(c(rep("Simulated Consumption",
+                                               length(ydump_dt$Simulated_Y)),
+                                           rep("Actual Consumption", 
+                                               length(survey_dt$wel_PPP)))))
+
+# Plot the overlaid histograms
+ggplot(welfare_dt, aes(x = Welfare, fill = Source)) +
+  geom_histogram(aes(y = after_stat(density)), alpha = 0.7, position = "identity", bins = 40) +
+  geom_density(aes(color = Source)) +
+  scale_fill_viridis_d(alpha = 0.7, option = "D") +  # Use viridis palette for fill
+  scale_color_viridis_d(option = "D") +  # Use viridis palette for density lines
+  labs(x = "Log Welfare",
+       y = "Density") +
+  xlim(c(5, 15)) + 
+  theme_minimal()
+
+
+```
+
+## Analysis of Variance
+
+Assessing the goodness of fit of the model estimation is important for understanding how well the selected set of variables explain the distribution of household consumption in the survey. In addition, the EB theoretical model assumes normality of the area random effect residuals and the idiosyncratic error terms.
+
+
+```{r, echo = FALSE}
+
+anova_dt <- 
+ebp_normalityfit(log_model) %>%
+  mutate(value = specify_decimal(value, 3)) %>%
+  t() %>%
+  as.data.frame() 
+
+colnames(anova_dt) <- anova_dt[1,]
+anova_dt <- anova_dt[-1,]
+
+anova_dt %>%
+  as.data.frame() %>%
+  flextable() %>%
+  set_header_labels(rsq_marginal = "marginal",
+                    rsq_conditional = "conditional",
+                    epsilon_skewness = "skewness",
+                    epsilon_kurtosis = "kurtosis",
+                    random_skewness = "skewness",
+                    random_kurtosis = "kurtosis") %>%
+  add_header_row(values = c("Model R\u00B2", "(Error Term) \u03B5", "(Random Effect) \u03BC"), 
+                 colwidths = c(2, 2, 2)) %>%
+  set_table_properties(width = 0.5, layout = "autofit") %>%
+  fontsize(size = 10) %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  theme_box() %>%
+  autofit() %>%
+  set_caption(caption = "Assessing Normality Assumptions",
+              style = "Table Caption",
+              autonum = run_autonum(seq_id = "tab", bkm = "tab_normality"))
+
+
+
+```
+In \@ref(tab:tab_normality), our results show reasonably high marginal and conditional R-square values i.e. around 56-58% of the variation in the per capita consumption can be explained by the EB model. A quick glance at the random effect normality estimates (skewness = `r specify_decimal(anova_dt$random_skewness, 3)`, kurtosis = `r specify_decimal(anova_dt$random_kurtosis, 3)`), kurtosis and skewness appear to be approximately 3 and 0 respectively. However, the idiosyncratic error term may tend towards a leptokurtic distribution due to the heavier tails and the sharper peak as seen with the kurtosis values around 4. We formally test the normality of both the idiosyncratic and random effect errors using the Kolmogrov-Smirnov test. Testing the normality of residuals is crucial to validate the assumptions underlying the EBP model and ensure the reliability of statistical inferences drawn from our analysis.  
+
+The Kolmogorov-Smirnov (KS) test is a non-parametric statistical test used to measure the closeness of a distribution to any distribution of choice, in our case a normal distribution. It quantifies the maximum distance between the empirical distribution function of the sample and the cumulative distribution function of the reference distribution. The KS test is particularly useful because it makes no assumptions about the distribution of the data, providing a robust method to assess the goodness-of-fit for continuous variables. In this study, we employ the KS test to evaluate the normality of both residuals from our unit-level Empirical Best Prediction (EBP) model. The Kolmogorov-Smirnov (KS) test statistic is given by:
+
+
+$$ D_n = \sup_x | F_n(x) - F(x)| $$
+
+
+where:
+- \( D_n \) is the Kolmogorov-Smirnov test statistic.
+- \( \sup \) denotes the supremum (the maximum value).
+- \( F_n(x) \) is the empirical distribution function (EDF) of the sample.
+- \( F(x) \) is the cumulative distribution function (CDF) of the reference distribution.
+
+The test statistic $D_n$ measures the maximum absolute difference between the empirical distribution function of the observed data and the cumulative distribution function of the theoretical distribution. A large value of $D_n$ indicates a significant difference between the observed and expected distributions, leading to the rejection of the null hypothesis that the sample comes from the specified distribution. 
+
+```{r, echo = FALSE}
+
+epsilon_values <- as.numeric(residuals(log_model$model, level = 0, type = "pearson"))
+
+mu_values <- as.numeric(nlme::ranef(log_model$model)$"(Intercept)")
+
+mu_values <- (mu_values - mean(mu_values, na.rm = TRUE)) / sd(mu_values, na.rm = TRUE)
+
+xx <- ks.test(epsilon_values, "pnorm", mean = mean(epsilon_values), sd = sd(epsilon_values))
+
+yy <- ks.test(mu_values, "pnorm", mean = mean(mu_values), sd = sd(mu_values))
+
+plot_random <- 
+  mu_values %>%
+  as.data.table() %>%
+  setnames(new = "values") %>%
+  ggplot() + 
+  geom_density(aes(x = values), fill = "blue", alpha = 0.5) + 
+  labs(x = "Random Effects", y = "Density", title = "Random Effect Residuals (\u03BC)") + 
+  theme_minimal() + 
+  ylim(0, 0.4) + 
+  xlim(-4, 4) + 
+  annotate("richtext", x = 0, y = 0.3, label = "<b>Kolmogrov-Smirnov Normality Test</b>", 
+           fill = NA, label.color = NA) + 
+  annotate("text", x = 0, y = 0.28, label = paste0("D-stat = ", 
+                                                  specify_decimal(yy$statistic, 3),
+                                                  "; p-value = ", 
+                                                  specify_decimal(yy$p.value, 3)), 
+           size = 3)
+
+plot_error <- 
+  epsilon_values %>%
+  as.data.table() %>%
+  setnames(new = "values") %>%
+  ggplot() + 
+  geom_density(aes(x = values), fill = "blue", alpha = 0.5) + 
+  labs(x = "Model Error Terms", y = "Density", title = "Standardized Error Residuals (\u03B5)") + 
+  theme_minimal() + 
+  annotate("richtext", x = 0.75, y = 0.3, label = "<b>Kolmogrov-Smirnov Normality Test</b>", 
+           fill = NA, label.color = NA) + 
+  annotate("text", x = 0, y = 0.28, label = paste0("D-stat = ", 
+                                                   specify_decimal(xx$statistic, 3),
+                                                   "; p-value = ", 
+                                                   specify_decimal(xx$p.value, 3)), 
+           size = 3)
+
+
+grid.arrange(grobs = list(plot_random, plot_error), nrow = 1)
+
+```
+
+The MSE is an absolute measure that combines both the variance and the square bias of the estimator. It is not easily comparable across constituencies with different poverty rates especially when the rates vary significantly. Therefore, we present the coefficients of variation for each constituency (i.e. $ \frac{MSE_c}{I_c}$). This is useful for a couple of reasons: 
+
+- (i) A measure of spread presented as the ratio of variance (i.e. CV) to the poverty rate is dimensionless. This allows for easy within and across group comparisons regardless of the poverty rate. 
+
+- (ii) This provides policy makers and non-technical stakeholders are more intuitive measure of dispersion with which they may set standards. A higher CV always indicates less precision and a national statistical office, as a rule of thumb, may decide to merge areas for which CVs are greater than 0.3, for instance. 
+
+- (iii) For the above reasons, the CV has been widely adopted in the context of SAE to assess the reliability of estimates as it helps in identifying areas were estimates are less trustworthy. 
+
+
+We compute CVs for both the direct head count rates in the survey and for the poverty rates estimated via EBP in the census. The direct poverty rates from the household survey at the target area level are expected to be highly imprecise due to low sample sizes. There are 3 direct head count rate CVs presented using 3 methodologies. Method 1 uses a calibrated (or naive) bootstrapping to estimate the mean squared error (MSE). The bootstrapping method calibrates each resampled dataset on auxiliary information using the direct function from the sae package. Calibrated bootstrapping has been shown to improve bias correction compared to naive bootstrapping, especially in the context of complex survey designs. For more details, refer to [@rao1988bootstrap]. The second type employs the Horvitz-Thompson variance estimation technique to calculate MSE. Here, each household is assigned a probability of selection based on the sampling scheme. The sae::direct function is used for this computation. This method accounts for the sampling design and ensures accurate estimation of variance in survey contexts. Method 3 adjusts the naive calibrated MSE using the design effect. The design effect is calculated with the svydesign function from the survey package, which helps to account for the increased variability introduced by the complex survey design. This adjustment provides a more realistic measure of variability for the MSE. For the EBP head count CV, we simply divide the mean square estimate with the poverty rate. See full table in the appendix.
+
+
+
+```{r fig-cv, echo = FALSE, warning=FALSE, message=FALSE}
+
+cv_dt <- read.csv("inst/postestimation/tables/targetarea_cvtable.csv")
+
+gains_value <- 
+  cv_dt %>%
+  mutate(gains = DesignEffect_CV / EBP_Head_Count_CV) %>%
+  summarize(mean(gains, na.rm = TRUE))
+
+#### include a plot of design effect CV vs EBP head count CV
+cv_scatter <- 
+cv_dt %>%
+  ggplot(aes(y = EBP_Head_Count_CV, x = DesignEffect_CV)) + 
+  geom_point(color = "blue") + 
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") + 
+  labs(x = "EBP Headcount CV",
+       y = "Design Effect Adjusted CV",
+       title = "Comparison of EBP Head Count CV and Design Effect Adjusted CV") +
+  xlim(0, 1.5) + 
+  ylim(0, 1.5) + 
+   annotate(
+    "text",
+    x = 0.75,  # Position of the text on the x-axis
+    y = 0.75,  # Position of the text on the y-axis
+    label = bquote("Precision Gains, " ~ frac(CV[EBP], 
+                                              CV[DesignEffect]) ~ " = " ~ .(specify_decimal(gains_value, 
+                                                                                          2))),
+    fontface = "italic") +
+  theme_minimal()
+  
+
+plot_scatter <- 
+ggExtra::ggMarginal(cv_scatter, type = "histogram", fill = "lightblue", color = "black") 
+
+print(plot_scatter)
+
+```
+
+Figure \@ref(fig-cv) shows the precision gains achieved of EBP estimation over reporting direct poverty rates. On average, EBP headcount poverty rate CVs are `r specify_decimal(gains_values, 2)` times less than the design effect CVs.
+
+## The Poverty Map
+
+The figures below show the estimated head count poverty rates [] and the population of poor []. Poverty appears to be concentrated towards to the north-east and north west corners of the country. On the the other hand, the southern most parts of the country appear to be least poor both in terms of headcount rates and population of poor. 
+
+```{r fig-povmap, echo = FALSE, fig.width = 10, fig.cap= "Namibia Poverty Map: Headcount Rate & Population of Poor"}
+
+### include population from the census into the shapefile
+
+hcrate_map <- 
+shp_dt %>%
+  ggplot() + 
+  geom_sf(aes(fill = Head_Count), color = "white", size = 0.2) + # `geom_sf()` for spatial data
+  scale_fill_viridis(option = "A",  # Viridis color option
+                     name = "Poverty Rate",
+                     direction = -1) +
+  theme_minimal() # Minimal theme for a clean look
+  
+hccount_map <- 
+shp_dt %>%
+  ggplot() + 
+  geom_sf(aes(fill = Head_Count*censuspop), color = "white", size = 0.2) +
+  scale_fill_viridis(option = "A",  # Viridis color option
+                     name = "Population \n of Poor",
+                     direction = -1) +
+  theme_minimal() # Minimal theme for a clean look
+
+grid.arrange(grobs = list(hcrate_map, hccount_map),
+             nrow = 1)
+
+ 
+```
+
+We validate the predicted poverty rates by aggregating the poverty rates to the regional level and comparing the results to the direct estimates at the same level. See results in table [\@ref(tab:tab_regpov)] below.
+
+```{r, echo = FALSE}
+
+pov_dt <- 
+  log_model$ind %>%
+  merge(unique(census_dt[, c("region_code", "const_code")] %>% 
+                 mutate(const_code = as.factor(const_code))),
+        by.x = "Domain",
+        by.y = "const_code") %>%
+  merge(census_dt[,!duplicated(colnames(census_dt)), with = F] %>%
+          group_by(const_code) %>%
+          summarize(censuspop = sum(hhsize, na.rm = TRUE)) %>%
+          mutate(const_code = as.factor(const_code)),
+        by.x = "Domain",
+        by.y = "const_code")
+
+
+newsurv_dt <- as.data.frame(na.omit(survey_dt[, c("wel_PPP",
+                                                  nam_selvars_list,
+                                                  "new_const_code",
+                                                  "wta_hh",
+                                                  "region_prev_name",
+                                                  "region_prev_code",
+                                                  "hhsize"),
+                                              with = F]))
+
+newsurv_dt <- as.data.table(newsurv_dt)
+
+
+regpov_dt <- 
+newsurv_dt[,!duplicated(colnames(newsurv_dt)), with = F] %>%
+  group_by(region_prev_name, region_prev_code) %>%
+  mutate(poor_var = ifelse(wel_PPP < 6249, 1, 0)) %>%
+  summarize(direct_poverty = weighted.mean(x = poor_var, w = wta_hh * hhsize, na.rm = TRUE)) %>%
+  merge(pov_dt %>%
+          group_by(region_code) %>%
+          summarize(ebp_poverty = weighted.mean(x = Head_Count, 
+                                                w = censuspop,
+                                                na.rm = TRUE)),
+        by.x = "region_prev_code",
+        by.y = "region_code") %>%
+  mutate(direct_poverty = specify_decimal(direct_poverty, 3),
+         ebp_poverty = specify_decimal(ebp_poverty, 3)) %>%
+  select(region_prev_name, direct_poverty, ebp_poverty)
+
+
+regpov_dt %>%
+  flextable() %>%
+  set_header_labels(region_prev_name = "Region",
+                    direct_poverty = "Direct Survey Estimates",
+                    ebp_poverty = "EBP Model Estimates") %>%
+  set_table_properties(width = 0.5, layout = "autofit") %>%
+  fontsize(size = 10) %>%
+  font(fontname = "Times New Roman", part = "all") %>%
+  theme_box() %>%
+  autofit() %>%
+  set_caption(caption = "Regional Poverty Comparisons : Direct Survey vs Census EB estimates",
+              style = "Table Caption",
+              autonum = run_autonum(seq_id = "tab", bkm = "tab_regpov"))
 
 
 
 
 
+
+
+
+
+
+
+```
+
+
+
+Appendix
+
+```{r fig_cooks, echo = FALSE, fig.cap= "Cook's Distance Measure for Outlier Detection"}
+# Assuming `log_model$model` is your model, and you are computing Cook's distance
+cooksdist <- cooks.distance(log_model$model)
+
+# Create a data table with Cook's Distance and indices
+cooks_dt <- data.table(index = 1:length(cooksdist), cooksdist = cooksdist)
+
+# Determine the threshold for outliers
+n <- length(cooksdist)  # Number of observations
+threshold <- 50 * mean(cooks_dt$cooksdist, na.rm = TRUE)      # Common rule of thumb
+
+# Add a column to flag outliers
+cooks_dt <- cooks_dt %>%
+  mutate(Outlier = cooksdist > threshold)
+
+# Plot with outliers highlighted
+cooks_dt %>%
+  ggplot(aes(x = index, y = cooksdist)) +
+  geom_segment(aes(x = index, y = 0, xend = index, yend = cooksdist, color = Outlier)) +
+  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) + 
+  xlab("Index") +
+  ylab("Cook's Distance") +
+  ylim(0, 0.016) + 
+  theme_minimal() +
+  # Label the outlier points
+  geom_text(
+    data = filter(cooks_dt, Outlier),
+    aes(label = index),
+    vjust = -1,
+    color = "red"
+  )
+
+```
+
+
+References
 
 
 

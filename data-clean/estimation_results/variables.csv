@@ -1,0 +1,39 @@
+variables,label
+(Intercept),Intercept
+areadummy_karas,Karas Dummy (=1 if HH in Karas Region)
+areadummy_erongo,Erongo Dummy (=1 if HH in Erongo Region)
+areadummy_hardap,Hardap Dummy (=1 if HH in Hardap Region)
+areadummy_kavango,Kavango Dummy (=1 if HH in Kavango Region)
+areadummy_khomas,Khomas Dummy (=1 if HH in Khomas Region)
+areadummy_kunene,Kunene Dummy (=1 if HH in Kunene Region)
+areadummy_ohangwena,Ohangwena Dummy (=1 if HH in Ohangwena Region)
+areadummy_omaheke,Omaheke Dummy (=1 if HH in Omaheke Region)
+areadummy_omusati,Omuasti Dummy (=1 if HH in Omusati Region)
+areadummy_oshana,Oshana Dummy (=1 if HH in Oshana Region)
+areadummy_oshikoto,Oshikoto Dummy (=1 if HH in Oshikoto Region)
+areadummy_otjozondjupa,Otjozondjupa Dummy (=1 if HH in Otjozondjupa Region)
+cellphone_No,Household with no cellphone
+computer_Yes,Household with no computer
+electyp_Electricity,Energy Source is electricity 
+floor_Natural___Earth_sand,Main floor material: Natural Earth/Sand 
+floor_Natural___Other,Main floor material: Natural-Other 
+floor_Rudimentary___Wood_planks,Main floor material: rudimentary wood planks 
+fuelcook_Firewood,Main cooking fuel is Firewood 
+fuelligh_Candles,Main lighting fuel: Candles 
+fuelligh_Kerosene,Main lighting fuel: Kerosene 
+fuelligh_None,No main lighting fuel 
+heatsource_Electricity,Main heating source: Electricity 
+heatsource_Kerosene,Main heating source: Kerosene 
+hhsize,Household size 
+internet_Yes,Household has access to internet 
+landphone_Yes,Household owns landphone 
+marital5_Living_together,Household marital status: Living together 
+roof_Finished___Concrete,Roofing material: finished concrete 
+rooms,No of rooms 
+television_No,Household doesn’t own a television 
+toilet6_Flush_toilet,Main toilet facility: Flush 
+wall_Finished___Cement_blocks,Main material for external walls: cement blocks 
+wall_Finished___Other,Main material for external walls: other 
+water14_Bottled_water,Main source of drinking water: bottled water 
+water14_Tanker_truck,Main source of drinking water: Tanker truck 
+waterpipe_Yes__in_premise,Household has piped water in premise 

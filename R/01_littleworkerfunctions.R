@@ -228,3 +228,128 @@ hist_plot <- function(dt, var, weights, col)
   return(hist)
 
 }
+
+
+
+
+ebp_compute_cv <- function(model,
+                           calibvar = NULL,
+                           boot_type = "calibrate",
+                           designvar = NULL,
+                           threshold = NULL,
+                           B = model$call$B){
+
+
+
+  if (is.null(model$call$weights)) {
+    model$framework$smp_data$weights <- rep(1, nrow(model$framework$smp_data))
+    model$call$weights <- "weights"
+  }
+
+  if (is.null(threshold)) {
+    threshold <- 0.6 * median(model$framework$smp_data[[paste(model$fixed[2])]])
+    message(strwrap(prefix = " ", initial = "",
+                    paste0("The threshold for the HCR and the PG is
+                          automatically set to 60% of the median of the
+                          dependent variable and equals ", threshold)))
+  }
+
+  # Direct Estimate with calibration : Mean and CV
+  if(!is.null(calibvar)) {
+    calibmatrix <- povmap:::create_calibmatrix(model$framework$smp_data[[calibvar]])
+
+    direct_calib <- povmap::direct(y = as.character(model$fixed[[2]]),
+                                   smp_data = model$framework$smp_data,
+                                   smp_domains = model$framework$smp_domains,
+                                   weights = model$call$weights,
+                                   design = designvar, threshold = threshold,
+                                   var = TRUE, boot_type = boot_type,
+                                   X_calib = calibmatrix, totals = NULL,
+                                   na.rm = TRUE, B = B)
+
+
+    direct_calib <-
+      data.frame(Domain = direct_calib$ind$Domain,
+                 CB_Head_Count_CV = sqrt(direct_calib$MSE$Head_Count) /
+                   direct_calib$ind$Head_Count)
+  }
+
+
+  # HT estimator CV for direct estimate
+  direct_ht <- povmap::direct(y = as.character(model$fixed[[2]]),
+                              smp_data = model$framework$smp_data,
+                              smp_domains = model$framework$smp_domains,
+                              weights = model$call$weights,
+                              threshold = threshold,
+                              var = TRUE, na.rm = TRUE, HT = T)
+
+  direct_ht <-
+    data.frame(Domain = direct_ht$ind$Domain,
+               Direct_Head_Count = direct_ht$ind$Head_Count,
+               HT_Head_Count_CV = sqrt(direct_ht$MSE$Head_Count) /
+                 direct_ht$ind$Head_Count)
+
+  # Compute design effect controlled direct estimates and CVs. (direct CV3)
+  ## first estimate naive bootstrap, than compute design effect and include psu
+  ## list into the ebp data object
+  model$framework$smp_data$poor <-
+    as.integer(model$framework$smp_data[[as.character(model$fixed[[2]])]] <
+                 threshold)
+  model$framework$smp_data$weights <-
+    model$framework$smp_data[[model$call$weights]]
+
+  if(is.null(designvar)){
+
+    ebpobj_svy <- survey::svydesign(ids = ~1, weights = ~weights, strata = NULL,
+                                    survey.lonely.psu = "adjust",
+                                    data = model$framework$smp_data)
+
+  } else {
+
+    model$framework$smp_data$designvar <- model$framework$smp_data[[designvar]]
+
+    ebpobj_svy <- survey::svydesign(ids = ~1, weights = ~weights,
+                                    strata = ~designvar,
+                                    survey.lonely.psu = "adjust",
+                                    data = model$framework$smp_data)
+
+  }
+
+  deff_adjust <- survey::svymean(x = ~poor, ebpobj_svy, na = TRUE, deff = TRUE)
+  deff_adjust <- attr(deff_adjust, "deff")[1,1]
+
+  direct_naive <- povmap::direct(y = as.character(model$fixed[[2]]),
+                                 smp_data = model$framework$smp_data,
+                                 smp_domains = model$framework$smp_domains,
+                                 design = designvar, weights = model$call$weights,
+                                 threshold = threshold, var = TRUE, B = B)
+
+  direct_naive <-
+    data.frame(Domain = direct_naive$ind$Domain,
+               DesignEffect_CV = sqrt(direct_naive$MSE$Head_Count * deff_adjust) /
+                 direct_naive$ind$Head_Count)
+
+  # get values for table
+  emdi_dt <- povmap::estimators(object = model, indicator = "Head_Count",
+                                MSE = FALSE, CV = TRUE)
+  result_dt <- emdi_dt$ind
+  colnames(result_dt) <- c("Domain", "EBP_Head_Count", "EBP_Head_Count_CV")
+
+  if (!is.null(calibvar)) {
+    result_dt <- merge(result_dt, direct_calib, by = "Domain", all = TRUE)
+  }
+  result_dt <- merge(result_dt, direct_ht, by = "Domain", all = TRUE)
+  result_dt <- merge(result_dt, direct_naive, by = "Domain", all = TRUE)
+
+  if (is.null(calibvar)) {
+    result_dt <- result_dt[,c("Domain", "Direct_Head_Count", "EBP_Head_Count",
+                              "HT_Head_Count_CV", "DesignEffect_CV",
+                              "EBP_Head_Count_CV")]
+  } else {
+    result_dt <- result_dt[,c("Domain", "Direct_Head_Count", "EBP_Head_Count",
+                              "HT_Head_Count_CV", "CB_Head_Count_CV",
+                              "DesignEffect_CV", "EBP_Head_Count_CV")]
+  }
+
+  return(result_dt)
+}

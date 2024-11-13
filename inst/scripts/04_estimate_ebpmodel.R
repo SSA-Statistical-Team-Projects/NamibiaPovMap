@@ -197,9 +197,16 @@ shpmatch_dt <-
   merge(log_model$ind,
         by.x = "const_code",
         by.y = "Domain") %>%
-  select(CONST_ID, Head_Count) %>%
+  merge(census_dt[, !duplicated(colnames(census_dt)), with = F] %>%
+          mutate(const_code = as.factor(const_code)) %>%
+          group_by(const_code) %>%
+          summarise(pop = sum(hhsize, na.rm = TRUE)),
+        by = "const_code",
+        all = TRUE) %>%
+  select(CONST_ID, Head_Count, pop) %>%
   group_by(CONST_ID) %>%
-  summarise(Head_Count = mean(Head_Count, na.rm = TRUE))
+  summarise(Head_Count = mean(Head_Count, na.rm = TRUE),
+            censuspop = mean(pop, na.rm = TRUE))
 
 shp_dt <-
   shp_dt %>%
@@ -208,6 +215,7 @@ shp_dt <-
 
 
 saveRDS(shp_dt, "../MapBotsMibiaR/inst/data/nam_povertyshp.RDS")
+saveRDS(shp_dt, "data-clean/estimation_results/povshapefile.RDS")
 
 
 save.image(file = "data-clean/estimation_results/pmap_image.RData")
