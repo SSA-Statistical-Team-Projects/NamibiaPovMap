@@ -4,3 +4,5 @@
 .httr-oauth
 .DS_Store
 data-raw/Namibia_Data
+data-raw/Census2011/Housing_2011.dta
+data-raw/Census2011/Persons_2011.dta
