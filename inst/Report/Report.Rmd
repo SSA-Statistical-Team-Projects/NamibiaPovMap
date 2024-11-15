@@ -49,7 +49,7 @@ The empirical EBP estimation process works as follows:
 
 1) Use the household survey to fit the above-described model to estimate $\hat\beta$, $\hat\sigma_\mu$, $\hat\sigma_{ch}$ parameters. Restricted Maximum Likelihood (REML) is used to compute $\hat\sigma_\mu$, $\hat\sigma_{ch}$ using the nlme [@pinheiro2018nlme] R package. The parameters are used to calculate the shrinkage factor $$ \hat\gamma = \frac{\sigma^2_u}{\sigma^2_\mu+\sigma^2_e\delta_c}$$ where $$ \delta_c = \frac{\sum_{h\in C} w^2_i}{(\sum_{h\in C}w_i)^2}.w_i$$ is the sample weight for household $i$ and $\delta_c$ is therefore the ratio fo the squared sum of weights to the square of the sum of weights for each constituency, c.
 
-2) For in-sample target areas, $Y_{ch}$ is estimated L = 100 times as follows $ y^{*(l)}_{ch} = x^T_{ch}\beta + \hat\mu_c + v^{(l)}_c + e^{(l)}_{ch}$ where $v^{(l)}_h \sim N(0, \sigma^2_\mu(1-\hat\gamma_c))$ and $\hat\mu_c = E[\mu_c|y^{*(l)}_{ch}]$, the expected value of the constituency effect given the sample data. For the out-of-sample constituencies, there is a no sample data to condition on, so $\hat\gamma_c = 0$ and $\hat\mu_c = 0$. Therefore, for these constituencies, $ y^{*(l)}_{ch} = x^T_{ch}\beta + v^{(l)}_c + e^{(l)}_{ch}$ and the estimates are purely synthetic predictions. 
+2) For in-sample target areas, $Y_{ch}$ is estimated L = 100 times as follows $y^{*(l)}_{ch} = x^T_{ch}\beta + \hat\mu_c + v^{(l)}_c + e^{(l)}_{ch}$ where $v^{(l)}_h \sim N(0, \sigma^2_\mu(1-\hat\gamma_c))$ and $\hat\mu_c = E[\mu_c|y^{*(l)}_{ch}]$, the expected value of the constituency effect given the sample data. For the out-of-sample constituencies, there is a no sample data to condition on, so $\hat\gamma_c = 0$ and $\hat\mu_c = 0$. Therefore, for these constituencies, $ y^{*(l)}_{ch} = x^T_{ch}\beta + v^{(l)}_c + e^{(l)}_{ch}$ and the estimates are purely synthetic predictions. 
 
 3) We take the exponential of $$y^{(l)}_i=e^{y^{*(l)}_{ch}}$$ to transform all $L$ monte carlo simulations back to the original scale. We apply the poverty line (6249 Namibian dollars, which is the upper bound poverty line) to $Y_{ch}$ for each of the $L$ simulations to estimate poverty rates for each simulation, and then average the estimated poverty rates over the simulations. 
 
@@ -220,16 +220,20 @@ We compare the distribution of household welfare between predicted and actual ho
 
 ```{r figcompwelf, fig.cap = "Comparing Welfare Density Distributions in Census and Survey", echo = FALSE, warning=FALSE, message=FALSE}
 
-ydump_dt <- fread("//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_log.csv")
+# ydump_dt <- fread("//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_log.csv")
+# 
+# ydump_dt <- 
+#   ydump_dt %>%
+#   mutate(hid = rep(census_dt$hid, 100)) %>%
+#   group_by(hid, Domain) %>%
+#   summarize(Simulated_Y = mean(Simulated_Y, na.rm = TRUE),
+#             XBetahat = mean(XBetahat, na.rm = TRUE),
+#             eta = mean(eta, na.rm = TRUE),
+#             epsilon = mean(epsilon, na.rm = TRUE))
+# 
+# saveRDS(ydump_dt, "data-clean/estimation_results/welfareydump_dt")
 
-ydump_dt <- 
-  ydump_dt %>%
-  mutate(hid = rep(census_dt$hid, 100)) %>%
-  group_by(hid, Domain) %>%
-  summarize(Simulated_Y = mean(Simulated_Y, na.rm = TRUE),
-            XBetahat = mean(XBetahat, na.rm = TRUE),
-            eta = mean(eta, na.rm = TRUE),
-            epsilon = mean(epsilon, na.rm = TRUE))
+ydump_dt <- readRDS("data-clean/estimation_results/welfareydump_dt")
 
 welfare_dt <- data.frame(Welfare = log(c(ydump_dt$Simulated_Y, survey_dt$wel_PPP)),
                          Source = factor(c(rep("Simulated Consumption",
@@ -290,7 +294,7 @@ anova_dt %>%
 
 
 ```
-In \@ref(tab:tab_normality), our results show reasonably high marginal and conditional R-square values i.e. around 56-58% of the variation in the per capita consumption can be explained by the EB model. A quick glance at the random effect normality estimates (skewness = `r specify_decimal(anova_dt$random_skewness, 3)`, kurtosis = `r specify_decimal(anova_dt$random_kurtosis, 3)`), kurtosis and skewness appear to be approximately 3 and 0 respectively. However, the idiosyncratic error term may tend towards a leptokurtic distribution due to the heavier tails and the sharper peak as seen with the kurtosis values around 4. We formally test the normality of both the idiosyncratic and random effect errors using the Kolmogrov-Smirnov test. Testing the normality of residuals is crucial to validate the assumptions underlying the EBP model and ensure the reliability of statistical inferences drawn from our analysis.  
+In \@ref(tab:tab_normality), our results show reasonably high marginal and conditional R-square values i.e. around 56-58% of the variation in the per capita consumption can be explained by the EB model. A quick glance at the random effect normality estimates (skewness = `r anova_dt$random_skewness`, kurtosis = `r anova_dt$random_kurtosis`) shows kurtosis and skewness appear to be approximately 3 and 0 respectively. However, the idiosyncratic error term may tend towards a leptokurtic distribution due to the heavier tails and the sharper peak as seen with the kurtosis values around 4. We formally test the normality of both the idiosyncratic and random effect errors using the Kolmogrov-Smirnov test. Testing the normality of residuals is crucial to validate the assumptions underlying the EBP model and ensure the reliability of statistical inferences drawn from our analysis.  
 
 The Kolmogorov-Smirnov (KS) test is a non-parametric statistical test used to measure the closeness of a distribution to any distribution of choice, in our case a normal distribution. It quantifies the maximum distance between the empirical distribution function of the sample and the cumulative distribution function of the reference distribution. The KS test is particularly useful because it makes no assumptions about the distribution of the data, providing a robust method to assess the goodness-of-fit for continuous variables. In this study, we employ the KS test to evaluate the normality of both residuals from our unit-level Empirical Best Prediction (EBP) model. The Kolmogorov-Smirnov (KS) test statistic is given by:
 
@@ -408,7 +412,7 @@ print(plot_scatter)
 
 ```
 
-Figure \@ref(fig-cv) shows the precision gains achieved of EBP estimation over reporting direct poverty rates. On average, EBP headcount poverty rate CVs are `r specify_decimal(gains_values, 2)` times less than the design effect CVs.
+Figure \@ref(fig-cv) shows the precision gains achieved of EBP estimation over reporting direct poverty rates. On average, EBP headcount poverty rate CVs are `r specify_decimal(gains_value, 2)` times less than the design effect CVs.
 
 ## The Poverty Map
 

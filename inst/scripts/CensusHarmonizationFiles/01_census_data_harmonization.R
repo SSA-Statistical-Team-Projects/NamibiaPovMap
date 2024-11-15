@@ -9,8 +9,8 @@ rm(list =  ls())
 pacman::p_load(here, haven, data.table)
 
 ## Set Working Directory
-getwd()
-setwd("C:\Users\wb604749\OneDrive - WBG\Documents\GitHub\NamibiaPovMap\data-raw\Namibia_Data\Census 2011")
+# getwd()
+# setwd("C:\Users\wb604749\OneDrive - WBG\Documents\GitHub\NamibiaPovMap\data-raw\Namibia_Data\Census 2011")
 
 ## Load Libraries
 
@@ -18,7 +18,7 @@ setwd("C:\Users\wb604749\OneDrive - WBG\Documents\GitHub\NamibiaPovMap\data-raw\
 ## Geographic Data ######------######------######------
 
 ## Import Constituency Data
-const_code_df <-  read.csv("Namibia_Constituency_Code.txt", header = FALSE)
+const_code_df <-  read.csv("inst/scripts/CensusHarmonizationFiles/Namibia_Constituency_Code.txt", header = FALSE)
 
 ## Clean Constituency Data
 names(const_code_df) <-  c("const_code", "region", "constituency")
@@ -32,7 +32,7 @@ region_code_df <-  unique(region_code_df)
 ## Housing Data ######------######------######------
 
 ## Import Data
-house_df <-  read_dta("Housing_2011.dta")
+house_df <-  read_dta("data-raw/Census2011/Housing_2011.dta")
 names(house_df) <-  tolower(names(house_df))
 
 ## Subset relevant variables
@@ -60,6 +60,7 @@ house_df$constituency_name <-  const_code_df$constituency[temp]
 
 
 house_df <- house_df[!is.na(house_df$hh_number),]
+
 ## Unique Household ID
 house_df$hid <-  paste0(house_df$const_code,
                       sprintf("%04.f", house_df$ea_code),
@@ -68,7 +69,7 @@ house_df$hid <-  paste0(house_df$const_code,
 
 
 ## Household Weight
-house_df$wta_hh = 1
+# house_df$wta_hh <- 1
 
 ## dweltyp (Type of Dwelling)
 ## H1. Housing Type
@@ -482,7 +483,7 @@ house_df <-  house_df[, temp]
 ## Person Data ######------######------######------
 
 ## Import Data
-per_df <-  read_dta("Persons_2011.dta")
+per_df <-  read_dta("data-raw/Census2011/Persons_2011.dta")
 names(house_df) <-  tolower(names(house_df))
 names(per_df) <-  tolower(names(per_df))
 per_df <-  setDT(per_df)
@@ -827,4 +828,4 @@ per_df <-  per_df[per_df$relathh9  == "Head", ]
 house_df <-  merge(house_df, per_df, by = "hid", all =  TRUE)
 
 ## Save Data
-save (house_df,file="~/GitHub/NamibiaPovMap/inst/data/house_df.RData")
+save(house_df,file="~/GitHub/NamibiaPovMap/inst/data/house_df.RData")

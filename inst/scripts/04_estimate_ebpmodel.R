@@ -33,9 +33,11 @@ survey_dt <- as.data.table(survey_dt)
 
 ### check that the poverty rates make sense
 survey_dt[, !duplicated(colnames(survey_dt)), with = F] %>%
-  mutate(poor_var = ifelse(wel_PPP < 6249, 1, 0)) %>%
-  summarize(weighted.mean(x = poor_var,
-                          w = wta_hh,
+  mutate(poor_abs = ifelse(poor_abs == "Poor", 1, 0)) %>%
+  group_by(region_name, region_code) %>%
+  # mutate(poor_var = ifelse(wel_PPP < 6249.437, 1, 0)) %>%
+  summarize(weighted.mean(x = poor_abs,
+                          w = wta_pop,
                           na.rm = TRUE))
 
 # remotes::install_github("SSA-Statistical-Team-Projects/povmap",
