@@ -353,3 +353,323 @@ ebp_compute_cv <- function(model,
 
   return(result_dt)
 }
+
+
+
+lassoebp_vselect <- function(dt,
+                             yvar,
+                             candidate_vars,
+                             lambda_min = 0,
+                             lambda_max = 500,
+                             by = 5,
+                             domain,
+                             scale = FALSE,
+                             seed = 1909,
+                             folds = 5,
+                             family = poisson(link = "log"),
+                             return_onlyvars = TRUE,
+                             maxIter = 200,
+                             epsilon = 1e-4,
+                             eps.final = 1e-4){
+
+  set.seed(seed)
+
+  N <- dim(dt)[1]
+
+  ind <- sample(N, N)
+
+  lambda_vector <- seq(lambda_min, lambda_max, by = by)
+
+  nk <- floor(N / folds)
+
+  dev_matrix <- matrix(Inf, ncol = folds, nrow = length(lambda_vector))
+
+  ## first fit good starting model
+
+  bic_vector <- rep(Inf, length(lambda_vector))
+
+  ## first, fit good starting model
+
+  pql_formula <- as.formula(paste(yvar, 1, sep = " ~ "))
+
+  dt$domain <- dt[[domain]]
+
+  if (scale == TRUE){
+
+    dt[, candidate_vars] <- scale(dt[, candidate_vars])
+
+  }
+
+
+  pql <-
+    glmmPQL(fixed = pql_formula,
+            random = ~1 | domain,
+            family = family,
+            data = dt)
+
+  delta_start <- as.matrix(t(c(as.numeric(pql$coeff$fixed),
+                               rep(0, length(candidate_vars)),
+                               as.numeric(t(pql$coef$random$domain)))))
+
+  q_start <- as.numeric(VarCorr(pql)[1, 1]) ## get variance of the random effect
+
+  ### formula to be used by glmmLasso function
+  glmlasso_formula <- as.formula(paste(paste0(yvar, " ~ "),
+                                       paste(candidate_vars,
+                                             collapse = " + ")))
+
+
+  ## loop over the folds
+  for (i in 1:folds) {
+
+    print(paste("CV Loop ", i, sep = ""))
+
+    if (i < folds) {
+
+      indi <- ind[(i-1) * nk + (1 : nk)]
+
+    } else {
+
+      indi <- ind[((i-1) * nk + 1) : N]
+
+    }
+
+    train_dt <- dt[-indi,]
+    test_dt <- dt[indi,]
+
+    delta_temp <- delta_start
+    q_temp <- q_start
+
+    ## loop over lambda grid
+    for(j in 1:length(lambda_vector))
+    {
+      #print(paste("Lambda Iteration ", j,sep=""))
+
+      glm_model <- try(glmmLasso(glmlasso_formula,
+                                 rnd = list(domain = paste(candidate_vars,
+                                                           collapse = " + ")),
+                                 family = family,
+                                 data = train_dt,
+                                 lambda = lambda_vector[j],
+                                 switch.NR = FALSE,
+                                 final.re = FALSE,
+                                 control = list(start = delta_temp[j,],
+                                                q_start = q_temp[j])),
+                       silent=TRUE)
+
+      if(!inherits(glm_model, "try-error")) {
+
+        yhat <- predict(glm_model, test_dt)
+        delta_temp <- rbind(delta_temp,
+                            glm_model$Deltamatrix[glm_model$conv.step,])
+
+        q_temp <- c(q_temp, glm_model$Q_long[[glm_model$conv.step + 1]])
+
+        dev_matrix[j,i] <- sum(family$dev.resids(test_dt[[yvar]],
+                                                 yhat,
+                                                 wt = rep(1,
+                                                          length(yhat))))
+      }
+    }
+  }
+
+  dev_vector <- apply(dev_matrix, 1, sum, na.rm = TRUE)
+
+  optlambda_index <- which.min(dev_vector)
+
+  ## now fit full model until optimal lambda (which is at opt4)
+  for(j in 1:optlambda_index)  {
+    glm_final <- glmmLasso(fix = glmlasso_formula,
+                           rnd = list(domain = paste(candidate_vars,
+                                                     collapse = " + ")),
+                           family = family,
+                           data = dt,
+                           lambda = lambda_vector[j],
+                           switch.NR = FALSE,
+                           final.re = FALSE,
+                           control = list(start = delta_start[j,],
+                                          q_start = q_start[j],
+                                          maxIter = maxIter,
+                                          epsilon = epsilon,
+                                          eps.final = eps.final))
+
+    delta_start <- rbind(delta_start, glm_final$Deltamatrix[glm_final$conv.step,])
+    q_start <- c(q_start, glm_final$Q_long[[glm_final$conv.step + 1]])
+  }
+
+
+
+  if (return_onlyvars == TRUE){
+
+    selvars_list <- names(glm_final$coefficients[glm_final$coefficients != 0])
+
+    selvars_list <- selvars_list[selvars_list != "(Intercept)"]
+
+    return(selvars_list)
+
+  }
+
+  return(glm_final)
+
+}
+
+select_candidates <- function(dt,
+                              y,
+                              xvars,
+                              threshold){
+
+
+  dt <- as.data.table(dt)
+
+  cor_matrix <- cor(dt[, c(y, xvars), with = FALSE])
+
+  # cor_dt <- data.table(vars = names(cor_matrix[,1]),
+  #                      cor = cor_matrix[,1])
+  #
+  # top_vars <- cor_dt[order(abs(cor_dt$cor), decreasing = TRUE),]$vars[2:N+1]
+  cor_matrix <- as.data.frame(cor_matrix)
+
+  cor_matrix$names <- rownames(cor_matrix)
+
+  cor_matrix <- as.data.table(cor_matrix)
+
+  cor_matrix <- melt(cor_matrix,
+                     id.vars = "names",
+                     measure.vars = colnames(cor_matrix)[!(colnames(cor_matrix) %in% "names")])
+
+  cor_matrix <- cor_matrix[!grepl(".1", cor_matrix$names),]
+  cor_matrix <- cor_matrix[!grepl(".1", cor_matrix$variable),]
+
+  ycor_dt <- cor_matrix[cor_matrix$variable == y,]
+  xcor_dt <- cor_matrix[cor_matrix$variable != y,]
+
+  xcor_dt <- xcor_dt[!is.na(xcor_dt$value),]
+
+  xcor_dt <- xcor_dt[abs(xcor_dt$value) < 1,]
+
+  drop_vars <- unique(xcor_dt[abs(xcor_dt$value) >= threshold,]$names)
+
+  #### select the top variables that are on the candidate_vars list
+  ycor_dt <- ycor_dt[order(-ycor_dt$value),]
+
+  top_vars <- ycor_dt$names[!grepl(y, ycor_dt$names)]
+
+  top_vars <- top_vars[!(top_vars %in% drop_vars)]
+
+  ycor_dt <- ycor_dt[ycor_dt$names %in% top_vars,]
+
+  top_vars <- ycor_dt$names
+
+  top_vars <- top_vars[!is.na(top_vars)]
+
+  # if (top_vars %in% c("rai", "rri")){
+  #
+  #   top_vars <- top_vars[!(top_vars %in% "rri")]
+  #
+  # }
+
+  return(top_vars)
+
+
+}
+
+
+### model selection by country
+countrymodel_select <- function(dt, xvars, y){
+
+  dt <- as.data.table(dt)
+
+  dt <- dt[,which(unlist(lapply(dt, function(x)!all(is.na(x))))), with = F]
+
+  xvars <- xvars[xvars %in% colnames(dt)]
+
+  dt <- na.omit(dt[,c(y, xvars), with = F])
+
+  xset <- dt[, xvars, with = F]
+
+  dt[["y"]] <- dt[, y, with = FALSE]
+
+  model_dt <- cbind(dt[["y"]], xset)
+
+  lasso_model <- hdm::rlasso(V1 ~ ., data = model_dt, post = TRUE)
+
+  lasso_model <- cbind(names(lasso_model$coefficients), as.data.table(lasso_model$coefficients))
+
+  colnames(lasso_model) <- c("variable_name", "value")
+
+  varsselect_list <- lasso_model$variable_name[lasso_model$value != 0]
+  varsselect_list <- varsselect_list[!varsselect_list == "(Intercept)"]
+
+
+  return(varsselect_list)
+
+}
+
+
+stepAIC_wrapper <- function(dt, xvars, y, weights){
+
+  dt <- as.data.table(dt)
+
+  dt <- dt[,which(unlist(lapply(dt, function(x)!all(is.na(x))))), with = F]
+
+  xvars <- xvars[xvars %in% colnames(dt)]
+
+  dt <- na.omit(dt[,c(y, xvars, weights), with = F])
+
+  xset <- dt[, xvars, with = F]
+
+  y <- dt[,y]
+
+  weights <- dt[, weights, with = F]
+
+  model_dt <- cbind(y, xset, weights)
+
+  full_model <- lm(y ~ .,
+                   data = model_dt,
+                   weights = weights)
+
+  ### use the vif method to drop multicollinear variables
+  vif_model <- car::vif(full_model)
+
+
+  stepwise_model <- stepAIC(full_model,
+                            direction = "both",
+                            trace = 0)
+
+  return(stepwise_model)
+
+}
+
+
+
+create_interactions <- function(dt, interacter_var, var_list) {
+  # Ensure dt is a data.table
+  if (!"data.table" %in% class(dt)) {
+    dt <- as.data.table(dt)
+  }
+
+  # Check if interacter_var exists in the dataset
+  if (!(interacter_var %in% names(dt))) {
+    stop(paste(interacter_var, "not found in dataset"))
+  }
+
+  # Check if var_list contains valid variables that exist in the dataset
+  if (any(!var_list %in% names(dt))) {
+    stop("Some variables in var_list are not found in the dataset.")
+  }
+
+  # Create an empty data.table to store interactions
+  int_dt <- data.table(matrix(nrow = nrow(dt)))
+
+  # Loop over var_list to create interaction terms
+  for (var in var_list) {
+    interaction_name <- paste0(var, "_X_", interacter_var)
+    int_dt[[interaction_name]] <- dt[[var]] * dt[[interacter_var]]
+  }
+
+  return(int_dt)
+}
+
+
+
+

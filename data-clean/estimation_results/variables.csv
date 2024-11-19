@@ -1,39 +1,31 @@
-variables,label
+var,label
 (Intercept),Intercept
-areadummy_karas,Karas Dummy (=1 if HH in Karas Region)
-areadummy_erongo,Erongo Dummy (=1 if HH in Erongo Region)
-areadummy_hardap,Hardap Dummy (=1 if HH in Hardap Region)
-areadummy_kavango,Kavango Dummy (=1 if HH in Kavango Region)
-areadummy_khomas,Khomas Dummy (=1 if HH in Khomas Region)
-areadummy_kunene,Kunene Dummy (=1 if HH in Kunene Region)
-areadummy_ohangwena,Ohangwena Dummy (=1 if HH in Ohangwena Region)
-areadummy_omaheke,Omaheke Dummy (=1 if HH in Omaheke Region)
-areadummy_omusati,Omuasti Dummy (=1 if HH in Omusati Region)
-areadummy_oshana,Oshana Dummy (=1 if HH in Oshana Region)
-areadummy_oshikoto,Oshikoto Dummy (=1 if HH in Oshikoto Region)
-areadummy_otjozondjupa,Otjozondjupa Dummy (=1 if HH in Otjozondjupa Region)
-cellphone_No,Household with no cellphone
-computer_Yes,Household with no computer
-electyp_Electricity,Energy Source is electricity 
-floor_Natural___Earth_sand,Main floor material: Natural Earth/Sand 
-floor_Natural___Other,Main floor material: Natural-Other 
-floor_Rudimentary___Wood_planks,Main floor material: rudimentary wood planks 
-fuelcook_Firewood,Main cooking fuel is Firewood 
-fuelligh_Candles,Main lighting fuel: Candles 
-fuelligh_Kerosene,Main lighting fuel: Kerosene 
-fuelligh_None,No main lighting fuel 
-heatsource_Electricity,Main heating source: Electricity 
-heatsource_Kerosene,Main heating source: Kerosene 
-hhsize,Household size 
-internet_Yes,Household has access to internet 
-landphone_Yes,Household owns landphone 
-marital5_Living_together,Household marital status: Living together 
-roof_Finished___Concrete,Roofing material: finished concrete 
-rooms,No of rooms 
-television_No,Household doesnt own a television 
-toilet6_Flush_toilet,Main toilet facility: Flush 
-wall_Finished___Cement_blocks,Main material for external walls: cement blocks 
-wall_Finished___Other,Main material for external walls: other 
-water14_Bottled_water,Main source of drinking water: bottled water 
-water14_Tanker_truck,Main source of drinking water: Tanker truck 
-waterpipe_Yes__in_premise,Household has piped water in premise 
+cellphone_No,Does the HH not own a cellphone?
+computer_Yes,Does the HH own a computer?
+electyp_Lamp,Does the HH own a electric lamp?
+floor_Finished___Floor_tiles_teraso,Does the HH have a floor finished with floor tiles teraso?
+floor_Natural___Earth_sand,Does the HH have a floor type with Natural Earth sand?
+fuelcook_Firewood,Does the HH use firewood as source of cooking fuel?
+fuelligh_Candles,Does the HH use candles as the source of lighting fuel?
+heatsource_Electricity,Does the HH own a heatsource?
+hhsize,Household size
+internet_Yes,Does the HH own an internet connection?
+landphone_Yes,Does the HH own a landphone?
+marital5_Living_together,Is the household respondent maried and living together with partner?
+open_def_No,Is the household sanitation NOT open defecation?
+rooms,Number of rooms in HH
+television_No,Does the HH not own a television?
+toilet6_Flush_toilet,Does the HH own a flush toilet?
+wall_Finished___Cement_blocks,Is the HH wall material finished cement blocks?
+water14_Bottled_water,"Is the HH source of drinking water, bottled water?"
+water14_Piped_water_into_dwelling,"Is the HH source of drinking water, piped water into dwelling?"
+fuelcook_Gas_X_rururb_rural,Rural Household with gas as source of cooking fuel?
+landphone_Yes_X_rururb_rural,Rural Household owning a landphone
+scaled_rooms_X_rururb_rural,Interaction Rural dummy with number of rooms in HH
+areadummy_hardap_X_rururb_rural,Rural HHs in Hardap region
+areadummy_zambezi_X_rururb_rural,Rural HHs in Zambezi
+areadummy_khomas,HHs in Khomas region (dummy)
+areadummy_kunene,HHs in Kunene region (dummy)
+areadummy_ohangwena,HHs in Ohangwena region (dummy)
+areadummy_oshana,HHs in Oshana region (dummy)
+areadummy_zambezi,HHs in Zambezi region (dummy)

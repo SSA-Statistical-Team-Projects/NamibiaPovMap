@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(povmap, flextable, tidyverse, here, ggplot2, sf, sfnetworks, 
                kableExtra, data.table, viridis, paletteer, ggthemes, 
                gridExtra, grid, flextable, showtext, extrafont, bookdown, 
-               officer, ggExtra, ggtext)
+               officer, ggExtra, ggtext, survey)
 
 
 # here::here(load("data-clean/estimation_results/pmap_image.RData"))
@@ -29,7 +29,7 @@ shp_dt <- readRDS(here::here("data-clean", "estimation_results", "povshapefile.R
 
 ## Introduction
 
-The Republic of Namibia, a rapidly urbanizing country in southwestern Africa with a small population of 3 million people (2023), faces poverty and inequality levels that are high for its income level. The country borders Angola and Zambia (north), Botswana (east), South Africa (south), and the Atlantic Ocean (west), lying within the Namib and Kalahari (semi-arid) deserts, and is one of the driest countries of sub-Saharan Africa. Its economy depends on agriculture, tourism, and mining (particularly diamonds and metals). Strong economic growth, improvements in labor incomes and educational attainment, and the expansion of social protection programs, helped significantly reduce poverty from 37.5 in 2003/04 to 17.4 percent in 2015/16 (the last available poverty data; using the official poverty line). Despite these improvements, Namibia continues to face one of the highest levels of income inequality in the world, with a per adult equivalent consumption Gini coefficient of 57.6 percent in 2015.
+The Republic of Namibia, a rapidly urbanizing country in southwestern Africa with a small population of 3 million people (2023), faces poverty and inequality levels that are high for its income level. The country borders Angola and Zambia (north), Botswana (east), South Africa (south), and the Atlantic Ocean (west), lying within the Namib and Kalahari (semi-arid) deserts, and is one of the driest countries of sub-Saharan Africa. Its economy depends on agriculture, tourism, and mining (particularly diamonds and metals). Strong economic growth, improvements in labor incomes and educational attainment, and the expansion of social protection programs, helped significantly reduce poverty from 37.5 in 2003/04 to 17.4 percent in 2015/16 (the last available poverty data; using the official poverty line). Despite these improvements, Namibia continues to face one of the highest levels of income inequality in the world, with a per adult equivalent consumption Gini coefficient of 57.6 percent in 2015. 
 
 Namibia made considerable progress since independence, with steady increases in access to education, water, sanitation, and electricity. However, access remains much weaker in certain parts of the country and especially in historically disadvantaged communities. In addition, the country’s relatively high poverty rate (for its income level) remains strongly correlated with lagging human capital and poor access to basic services. Deep inequalities remain in the distribution of resources, opportunities, and income. The country experiences prolonged droughts and growing water insecurities, with urbanization and economic growth increasing the demand for water. The poorest population, particularly in rural areas, are particularly vulnerable to weather-related shocks. 
 
@@ -53,7 +53,7 @@ The empirical EBP estimation process works as follows:
 
 3) We take the exponential of $$y^{(l)}_i=e^{y^{*(l)}_{ch}}$$ to transform all $L$ monte carlo simulations back to the original scale. We apply the poverty line (6249 Namibian dollars, which is the upper bound poverty line) to $Y_{ch}$ for each of the $L$ simulations to estimate poverty rates for each simulation, and then average the estimated poverty rates over the simulations. 
 
-$$ I^{EBP}_c = \frac{1}{L}\sum^L_{l=1}{I^{(l)}_{ch}{(y^{(l)}_i)}}$$
+$$ I^{EBP}_c = \frac{1}{L}\sum^L_{l=1}{I^{(l)}_{ch}{(y^{(l)}_i)}} $$
 
 Mean square error, a measure of uncertainty, is estimated through the parametric bootstrap procedure implemented in the povmap package [@gonzalez2007estimation]. See [@edochie2024small, @kreutzmann2019r] for more details.
 
@@ -193,7 +193,7 @@ In terms of energy use, those households that power (lighting and heating) their
 variables_dt <- read.csv("data-clean/estimation_results/variables.csv")
 
 ebp_reportcoef_table(log_model, decimals = 3) %>%
-  merge(variables_dt, by.x = "Variable", by.y = "variables") %>%
+  merge(variables_dt, by.x = "Variable", by.y = "var") %>%
   dplyr::select(label, coeff, std_error) %>%
   rename(Variable = label,
          Coefficients = coeff,
@@ -381,6 +381,7 @@ cv_dt <- read.csv("inst/postestimation/tables/targetarea_cvtable.csv")
 gains_value <- 
   cv_dt %>%
   mutate(gains = DesignEffect_CV / EBP_Head_Count_CV) %>%
+  filter(!is.infinite(gains)) %>%
   summarize(mean(gains, na.rm = TRUE))
 
 #### include a plot of design effect CV vs EBP head count CV
@@ -425,7 +426,7 @@ The figures below show the estimated head count poverty rates [] and the populat
 hcrate_map <- 
 shp_dt %>%
   ggplot() + 
-  geom_sf(aes(fill = Head_Count), color = "white", size = 0.2) + # `geom_sf()` for spatial data
+  geom_sf(aes(fill = Head_Count), size = 0.2) + # `geom_sf()` for spatial data
   scale_fill_viridis(option = "A",  # Viridis color option
                      name = "Poverty Rate",
                      direction = -1) +
@@ -434,7 +435,7 @@ shp_dt %>%
 hccount_map <- 
 shp_dt %>%
   ggplot() + 
-  geom_sf(aes(fill = Head_Count*censuspop), color = "white", size = 0.2) +
+  geom_sf(aes(fill = Head_Count*censuspop), size = 0.2) +
   scale_fill_viridis(option = "A",  # Viridis color option
                      name = "Population \n of Poor",
                      direction = -1) +
@@ -448,11 +449,11 @@ grid.arrange(grobs = list(hcrate_map, hccount_map),
 
 We validate the predicted poverty rates by aggregating the poverty rates to the regional level and comparing the results to the direct estimates at the same level. See results in table [\@ref(tab:tab_regpov)] below.
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
 
 pov_dt <- 
   log_model$ind %>%
-  merge(unique(census_dt[, c("region_code", "const_code")] %>% 
+  merge(unique(census_dt[, c("region_code", "const_code", "region_name")] %>% 
                  mutate(const_code = as.factor(const_code))),
         by.x = "Domain",
         by.y = "const_code") %>%
@@ -464,23 +465,49 @@ pov_dt <-
         by.y = "const_code")
 
 
-newsurv_dt <- as.data.frame(na.omit(survey_dt[, c("wel_PPP",
+newsurv_dt <- as.data.frame(na.omit(survey_dt[, c("wel_abs",
                                                   nam_selvars_list,
                                                   "new_const_code",
                                                   "wta_hh",
                                                   "region_prev_name",
                                                   "region_prev_code",
-                                                  "hhsize"),
+                                                  "hhsize",
+                                                  "hhweight",
+                                                  "cluster",
+                                                  "poor_abs"),
                                               with = F]))
 
 newsurv_dt <- as.data.table(newsurv_dt)
+
+newsurv_dt[, poor_abs := ifelse(poor_abs == "Poor", 1, 0)]
+
+
+#### compute direct survey variance for each region
+newsurv_obj <- survey::svydesign(ids = ~cluster, 
+                                 weights = ~hhweight,
+                                 strata = ~region_prev_code+region_prev_name,
+                                 survey.lonely.psu = "adjust",
+                                 data = newsurv_dt,
+                                 nest = TRUE)
+
+var_dt <- svyby(~poor_abs,
+                ~region_prev_code+region_prev_name,
+                newsurv_obj,
+                svymean)
+
+var_dt <- 
+  var_dt %>%
+  mutate(povLB = poor_abs - 1.96*se,
+         povUB = poor_abs + 1.96*se) 
 
 
 regpov_dt <- 
 newsurv_dt[,!duplicated(colnames(newsurv_dt)), with = F] %>%
   group_by(region_prev_name, region_prev_code) %>%
-  mutate(poor_var = ifelse(wel_PPP < 6249, 1, 0)) %>%
-  summarize(direct_poverty = weighted.mean(x = poor_var, w = wta_hh * hhsize, na.rm = TRUE)) %>%
+  mutate(poor_var = ifelse(wel_abs < 6249.473, 1, 0)) %>%
+  summarize(direct_poverty = weighted.mean(x = poor_var, 
+                                           w = wta_hh * hhsize, 
+                                           na.rm = TRUE)) %>%
   merge(pov_dt %>%
           group_by(region_code) %>%
           summarize(ebp_poverty = weighted.mean(x = Head_Count, 
@@ -508,12 +535,29 @@ regpov_dt %>%
               autonum = run_autonum(seq_id = "tab", bkm = "tab_regpov"))
 
 
+##### create confidence bounds on the regional estimates
 
+regpov_dt <- 
+  regpov_dt %>%
+  merge(var_dt[, c("region_prev_name", "povLB", "povUB")])
 
+regpov_dt$region_prev_name[regpov_dt$region_prev_name == "caprivi"] <- "zambezi"
 
-
-
-
+#### plot the direct vs ebp estimate at the regional level with the confidence bounds 
+regpov_dt %>%
+  mutate(direct_poverty = as.numeric(direct_poverty)) %>%
+  mutate(ebp_poverty = as.numeric(ebp_poverty)) %>% 
+  ggplot(aes(x = region_prev_name)) +
+  geom_point(aes(y = ebp_poverty), color = "blue", size = 2) +  # Plotting provFH
+  geom_errorbar(aes(ymin = povLB, ymax = povUB), width = 0.2, color = "red") +  # Error bars for DirectLB and DirectUB
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +  # Adding a horizontal line at y = 0
+  labs(x = "Region", 
+       y = "Poverty Rate",
+       caption = "Note: Author calculations of Direct Estimate 95% CI at the \nprovince level (Red error bars) compared with FH
+       estimates at same level (blue dots)") +  # Labeling axes
+  theme_bw() +  # Setting a white background theme
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),  # Angling x-axis text
+        plot.caption = element_text(hjust = 0.5, size = 10))   
 
 
 

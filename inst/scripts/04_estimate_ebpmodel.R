@@ -15,25 +15,31 @@ pacman::p_load(data.table, dplyr, stringr, fuzzyjoin, povmap)
 #------------------------------------------------------------------------------#
 
 nam_selvars_list <- readRDS("data-raw/nam_selvars_list.RDS")
+nam_caicselvars_list <- readRDS("data-raw/nam_caicselvars_list.RDS")
 
-census_dt <- readRDS("data-clean/census_dt.RDS")
+census_dt <- readRDS("data-clean/census_final.RDS")
 
-survey_dt <- readRDS("data-clean/survey_dt.RDS")
+survey_dt <- readRDS("data-clean/survey_final.RDS")
 
-census_dt$const_code <- as.numeric(census_dt$const_code)
+# census_dt$const_code <- as.numeric(census_dt$const_code)
+#
+# survey_dt$new_const_code <- as.numeric(survey_dt$new_const_code)
 
-survey_dt$new_const_code <- as.numeric(survey_dt$new_const_code)
+# census_dt["wta_hh"] <- lapply(haven::zap_labels(census_dt["wta_hh"]) ,as.numeric)
 
-census_dt["wta_hh"] <- lapply(haven::zap_labels(census_dt["wta_hh"]) ,as.numeric)
+survey_dt[is.na(new_const_code), new_const_code := const_code]
 
-nam_selvars_list  <- intersect(intersect(nam_selvars_list, names(survey_dt)), names(census_dt))
+survey_dt[, new_const_code := as.integer(as.character(new_const_code))]
+census_dt[, const_code := as.integer(const_code)]
 
-census_dt <- as.data.table(census_dt)
-survey_dt <- as.data.table(survey_dt)
+nam_selvars_list <- intersect(intersect(nam_selvars_list, names(survey_dt)), names(census_dt))
+
+# census_dt <- as.data.table(census_dt)
+# survey_dt <- as.data.table(survey_dt)
 
 ### check that the poverty rates make sense
 survey_dt[, !duplicated(colnames(survey_dt)), with = F] %>%
-  mutate(poor_abs = ifelse(poor_abs == "Poor", 1, 0)) %>%
+  mutate(poor_abs = ifelse(wel_abs <= pl_abs, 1, 0)) %>%
   group_by(region_name, region_code) %>%
   # mutate(poor_var = ifelse(wel_PPP < 6249.437, 1, 0)) %>%
   summarize(weighted.mean(x = poor_abs,
@@ -42,23 +48,24 @@ survey_dt[, !duplicated(colnames(survey_dt)), with = F] %>%
 
 # remotes::install_github("SSA-Statistical-Team-Projects/povmap",
 #                         ref = "david3")
+survey_dt[, hhweight := hhsize * wta_hh]
 
-log_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
+log_model <- povmap::ebp(fixed = as.formula(paste("wel_abs ~ ", paste(nam_selvars_list,
                                                                collapse= "+"))),
                  pop_data = as.data.frame(na.omit(census_dt[, c(nam_selvars_list,
-                                                                "const_code","wta_hh"),
+                                                                "const_code","hhsize"),
                                                             with = F])),
                  pop_domains = "const_code",
-                 smp_data = as.data.frame(na.omit(survey_dt[, c("wel_PPP",
+                 smp_data = as.data.frame(na.omit(survey_dt[, c("wel_abs",
                                                                 nam_selvars_list,
                                                                 "new_const_code",
-                                                                "wta_hh"),
+                                                                "hhweight"),
                                                             with = F])),
                  smp_domains = "new_const_code",
                  transformation = "log",
-                 threshold = 6249,
+                 threshold = 6249.437,
                  pop_weights = "hhsize",
-                 weights = "wta_hh",
+                 weights = "hhweight",
                  L = 100,
                  B = 100,
                  cpus = 30,
@@ -70,22 +77,22 @@ log_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
 saveRDS(log_model, "data-clean/estimation_results/unitmodel_log.RDS")
 
 
-ord_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
+ord_model <- povmap::ebp(fixed = as.formula(paste("wel_abs ~ ", paste(nam_selvars_list,
                                                                       collapse= "+"))),
                          pop_data = as.data.frame(na.omit(census_dt[, c(nam_selvars_list,
-                                                                        "const_code","wta_hh"),
+                                                                        "const_code","hhsize"),
                                                                     with = F])),
                          pop_domains = "const_code",
-                         smp_data = as.data.frame(na.omit(survey_dt[, c("wel_PPP",
+                         smp_data = as.data.frame(na.omit(survey_dt[, c("wel_abs",
                                                                         nam_selvars_list,
                                                                         "new_const_code",
-                                                                        "wta_hh"),
+                                                                        "hhweight"),
                                                                     with = F])),
                          smp_domains = "new_const_code",
                          transformation = "ordernorm",
-                         threshold = 6249,
+                         threshold = 6249.437,
                          pop_weights = "hhsize",
-                         weights = "wta_hh",
+                         weights = "hhweight",
                          L = 100,
                          B = 100,
                          cpus = 30,
@@ -97,22 +104,22 @@ ord_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
 saveRDS(ord_model, "data-clean/estimation_results/unitmodel_ordernorm.RDS")
 
 
-bcx_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
+bcx_model <- povmap::ebp(fixed = as.formula(paste("wel_abs ~ ", paste(nam_selvars_list,
                                                                       collapse= "+"))),
                          pop_data = as.data.frame(na.omit(census_dt[, c(nam_selvars_list,
-                                                                        "const_code","wta_hh"),
+                                                                        "const_code","hhsize"),
                                                                     with = F])),
                          pop_domains = "const_code",
-                         smp_data = as.data.frame(na.omit(survey_dt[, c("wel_PPP",
+                         smp_data = as.data.frame(na.omit(survey_dt[, c("wel_abs",
                                                                         nam_selvars_list,
                                                                         "new_const_code",
-                                                                        "wta_hh"),
+                                                                        "hhweight"),
                                                                     with = F])),
                          smp_domains = "new_const_code",
                          transformation = "box.cox",
                          threshold = 6249,
-                         pop_weights = "wta_hh",
-                         weights = "wta_hh",
+                         pop_weights = "hhsize",
+                         weights = "hhweight",
                          weights_type = "nlme",
                          L = 100,
                          B = 100,
@@ -125,32 +132,32 @@ bcx_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvar
 saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_boxcox.RDS")
 
 
-logshift_model <- povmap::ebp(fixed = as.formula(paste("wel_PPP ~ ", paste(nam_selvars_list,
+logshift_model <- povmap::ebp(fixed = as.formula(paste("wel_abs ~ ", paste(nam_selvars_list,
                                                                            collapse= "+"))),
                               pop_data = as.data.frame(na.omit(census_dt[, c(nam_selvars_list,
-                                                                             "const_code","wta_hh"),
+                                                                             "const_code","hhsize"),
                                                                          with = F])),
                               pop_domains = "const_code",
-                              smp_data = as.data.frame(na.omit(survey_dt[, c("wel_PPP",
+                              smp_data = as.data.frame(na.omit(survey_dt[, c("wel_abs",
                                                                              nam_selvars_list,
                                                                              "new_const_code",
-                                                                             "wta_hh"),
+                                                                             "hhweight"),
                                                                          with = F])),
                               smp_domains = "new_const_code",
                               transformation = "log.shift",
                               threshold = 6249,
-                              pop_weights = "wta_hh",
-                              weights = "wta_hh",
+                              pop_weights = "hhsize",
+                              weights = "hhweight",
                               weights_type = "nlme",
                               L = 100,
                               B = 100,
                               cpus = 30,
                               MSE = FALSE,
                               na.rm = TRUE,
-                              Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_bcx.csv",
+                              Ydump = "//esapov/esapov/NAM/GEO/Population/povmap/unitmodel_logshift.csv",
                               rescale_weights = TRUE)
 #------------------------------------------------------------------------------#
-saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_boxcox.RDS")
+saveRDS(bcx_model, "data-clean/estimation_results/unitmodel_logshift.RDS")
 
 
 
